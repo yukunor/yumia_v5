@@ -5,13 +5,11 @@ from .index_emotion import update_emotion_index
 from utils import logger  # ロガーのインポート
 
 # プロジェクトルートを src に固定（Render対応）
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# 保存先パス設定
-INDEX_DIR = os.path.join(BASE_DIR, "index")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+INDEX_PATH = os.path.join(BASE_DIR, "index", "emotion_index.jsonl")
 index_dir = os.path.dirname(INDEX_PATH)
 
-# 存在しなければ警告＋例外
+# ディレクトリ存在チェック
 logger.debug(f"[DEBUG] index_dir = {index_dir}")
 if not index_dir.endswith(os.path.join("index")):
     logger.warning(f"[WARNING] 不正な保存先候補: {index_dir}")
@@ -31,3 +29,4 @@ def handle_emotion(emotion_data):
     except Exception as e:
         logger.error(f"[ERROR] 感情データ処理中にエラー発生: {e}")
         raise
+
