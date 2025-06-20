@@ -4,8 +4,8 @@ from .divide_emotion import divide_and_store
 from .index_emotion import update_emotion_index
 from utils import logger  # ロガーのインポート
 
-# プロジェクトルートを相対パスから取得（Render対応）
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# プロジェクトルートを src に固定（Render対応）
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # 保存先パス設定
 INDEX_PATH = os.path.join(BASE_DIR, "index", "emotion_index.jsonl")
@@ -31,4 +31,3 @@ def handle_emotion(emotion_data):
     except Exception as e:
         logger.error(f"[ERROR] 感情データ処理中にエラー発生: {e}")
         raise
-
