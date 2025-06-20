@@ -5,10 +5,10 @@ from .index_emotion import update_emotion_index
 from utils import logger  # ロガーのインポート
 
 # プロジェクトルートを src に固定（Render対応）
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 保存先パス設定
-INDEX_PATH = os.path.join(BASE_DIR, "index", "emotion_index.jsonl")
+INDEX_DIR = os.path.join(BASE_DIR, "index")
 index_dir = os.path.dirname(INDEX_PATH)
 
 # 存在しなければ警告＋例外
