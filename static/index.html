@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatGPT風 UI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: white;
+    }
+
+    .chat-container {
+      width: 720px;
+      height: 840px;
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 40px 30px 20px 30px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 20px;
+      max-width: 85%;
+      word-wrap: break-word;
+      line-height: 1.5;
+      font-size: 18px;
+      white-space: pre-wrap;
+      box-sizing: border-box;
+    }
+
+    .message.user {
+      background-color: #daf7f6;
+      align-self: flex-end;
+      text-align: left;
+    }
+
+    .message.system {
+      background-color: white;
+      align-self: flex-start;
+      text-align: left;
+    }
+
+    .input-area {
+      display: flex;
+      flex-direction: row;
+      padding: 20px;
+      background-color: #fff;
+      position: relative;
+    }
+
+    .input-area textarea {
+      padding: 15px;
+      font-size: 18px;
+      border-radius: 25px;
+      border: 1px solid #ccc;
+      resize: none;
+      overflow-y: auto;
+      min-height: 75px;
+      max-height: 160px;
+      width: calc(100% - 60px);
+      box-sizing: border-box;
+      transition: height 0.2s ease;
+      position: relative;
+      padding-bottom: 30px;
+    }
+
+    .input-area .bottom-line {
+      position: absolute;
+      bottom: 10px;
+      left: 15px;
+      right: 15px;
+      font-size: 16px;
+      color: gray;
+      pointer-events: none;
+      background-color: transparent;
+    }
+
+    .input-area button {
+      padding: 12px;
+      background-color: #000;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 50px;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .input-area button:hover {
+      background-color: #444;
+    }
+
+    .input-area button::after {
+      content: "↑";
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <textarea id="userInput" placeholder="メッセージを入力..." rows="1" oninput="autoResizeInput()"></textarea>
+      <div class="bottom-line"></div>
+      <button onclick="sendMessage()"></button>
+    </div>
+  </div>
+
+  <script>
+    function scrollToBottom() {
+      const messagesDiv = document.getElementById("messages");
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const userInput = document.getElementById('userInput');
+      const message = userInput.value.trim();
+      if (message === "") return;
+
+      appendMessage("user", message);
+      userInput.value = "";
+
+      const systemDiv = appendMessage("system", "応答生成中...");
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message: message })
+        });
+
+        const data = await response.json();
+        typeMessage(systemDiv, data.message);
+      } catch (e) {
+        systemDiv.textContent = "エラーが発生しました";
+      }
+    }
+
+    function appendMessage(role, message) {
+      const messageDiv = document.createElement("div");
+      messageDiv.classList.add("message", role);
+      messageDiv.textContent = message;
+      document.getElementById("messages").appendChild(messageDiv);
+      scrollToBottom();
+      return messageDiv;
+    }
+
+    function typeMessage(element, message) {
+      element.textContent = "";
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < message.length) {
+          element.textContent += message.charAt(index);
+          scrollToBottom();
+          index++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 30);
+    }
+
+    function autoResizeInput() {
+      const textarea = document.getElementById('userInput');
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(textarea.scrollHeight, 160);
+      textarea.style.height = newHeight + 'px';
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch("/history");
+        const data = await res.json();
+        data.history.forEach(entry => {
+          appendMessage(entry.role, entry.message);
+        });
+        scrollToBottom();
+      } catch (e) {
+        console.error("履歴の取得に失敗しました", e);
+      }
+    }
+
+    window.onload = () => {
+      loadHistory();
+    };
+
+    document.getElementById("userInput").addEventListener("keydown", function(event) {
+      if (event.key === "Enter" && event.shiftKey) {
+        event.preventDefault();
+        const textarea = document.getElementById("userInput");
+        const cursorPos = textarea.selectionStart;
+        const text = textarea.value;
+        textarea.value = text.slice(0, cursorPos) + "\n" + text.slice(cursorPos);
+        textarea.selectionStart = textarea.selectionEnd = cursorPos + 1;
+        autoResizeInput();
+      }
+    });
+
+    document.getElementById("userInput").addEventListener("keydown", function(event) {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
