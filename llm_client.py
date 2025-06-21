@@ -86,7 +86,8 @@ def generate_gpt_response_from_history(history):
     else:
         logger.warning("[WARNING] 応答にJSONが含まれていません")
 
-    return full_response.split("```json")[0].strip()
+    cleaned_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
+    return cleaned_response
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     prompt_rule = load_user_prompt()
@@ -116,8 +117,8 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        display_text = full_response.split("```json")[0].strip()
-        return display_text, emotion_data
+        cleaned_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
+        return cleaned_response, emotion_data
     else:
         logger.warning("[WARNING] 感情推定にJSONが含まれていません")
         return full_response, {}
