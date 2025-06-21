@@ -4,7 +4,7 @@ from .divide_emotion import divide_and_store
 from .index_emotion import update_emotion_index
 from utils import logger  # ロガーのインポート
 
-# プロジェクトルートを src に固定（Render対応）
+# BASE_DIR は module ディレクトリの親（＝リポジトリルート）に設定されています（Render対応）
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 INDEX_PATH = os.path.join(BASE_DIR, "index", "emotion_index.jsonl")
 index_dir = os.path.dirname(INDEX_PATH)
