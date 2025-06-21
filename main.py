@@ -1,12 +1,14 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
+import re
+import threading
+import traceback
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
-import threading
-import traceback
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 
 from utils import append_history, load_history
 from module.response.main_response import run_response_pipeline
@@ -19,6 +21,13 @@ app = FastAPI()
 # ユーザーからの入力スキーマ
 class UserMessage(BaseModel):
     message: str
+
+def sanitize_output_for_display(text: str) -> str:
+    # タグ付きJSONを削除
+    text = re.sub(r"```json\s*\{.*?\}\s*```", "", text, flags=re.DOTALL)
+    # タグなしJSONで「date」〜「keywords」を含むブロックを削除
+    text = re.sub(r"\{[^{}]*\"date\"[^{}]*\"keywords\"[^{}]*\}", "", text, flags=re.DOTALL)
+    return text.strip()
 
 # チャットエンドポイント（responseモード）
 @app.post("/chat")
@@ -36,8 +45,9 @@ def chat(user_message: UserMessage):
         response, emotion_data = run_response_pipeline(user_input)
         print("✅ 応答生成完了")
 
-        # ステップ③：応答を履歴に追加
-        append_history("system", response)
+        # ステップ③：応答を履歴に追加（出力前にJSON除去）
+        sanitized_response = sanitize_output_for_display(response)
+        append_history("system", sanitized_response)
         print("✅ 応答履歴追加完了")
 
         # ステップ④：感情保存を非同期実行（保存失敗しても応答は返す）
@@ -46,7 +56,7 @@ def chat(user_message: UserMessage):
 
         # ステップ⑤：応答と履歴を返す
         return {
-            "message": response,
+            "message": sanitized_response,
             "history": load_history()
         }
 
