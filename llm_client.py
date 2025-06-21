@@ -1,4 +1,4 @@
-import openai
+from openai import OpenAI
 import re
 import json
 import os
@@ -8,10 +8,7 @@ from module.memory.main_memory import handle_emotion
 from module.memory.oblivion_emotion import clean_old_emotions
 from module.context.context_selector import select_contextual_history
 
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    raise RuntimeError("OPENAI_API_KEY が環境変数に設定されていません")
-openai.api_key = api_key
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def extract_emotion_summary(composition: dict) -> str:
     if not composition:
@@ -29,7 +26,7 @@ def generate_gpt_response_from_history(history):
 
     try:
         logger.info("[INFO] OpenAI呼び出し開始")
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -38,9 +35,7 @@ def generate_gpt_response_from_history(history):
             ],
             max_tokens=2000,
             temperature=0.7,
-            top_p=1.0,
-            stream=False,
-            timeout=30
+            top_p=1.0
         )
         logger.info("[INFO] OpenAI応答取得完了")
     except Exception as e:
@@ -67,7 +62,6 @@ def generate_gpt_response_from_history(history):
                 save_path = os.path.join(save_dir, "emotion.json")
 
                 logger.debug(f"[DEBUG] 構造化データ保存先: {save_path}")
-
                 os.makedirs(save_dir, exist_ok=True)
 
                 if os.path.exists(save_path):
@@ -104,7 +98,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     full_prompt = f"{prompt_rule}\nユーザー発言: {user_input}"
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": load_system_prompt_cached()},
@@ -112,9 +106,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
             ],
             max_tokens=1000,
             temperature=0.7,
-            top_p=1.0,
-            stream=False,
-            timeout=30
+            top_p=1.0
         )
         logger.info("[INFO] 感情推定完了")
     except Exception as e:
@@ -155,7 +147,7 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     prompt = f"{user_prompt}\n\nユーザー発言: {user_input}\n{reference_text}"
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -163,11 +155,10 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
             ],
             max_tokens=1000,
             temperature=0.7,
-            top_p=1.0,
-            stream=False,
-            timeout=30
+            top_p=1.0
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+
