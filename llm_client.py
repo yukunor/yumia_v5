@@ -45,10 +45,7 @@ def generate_gpt_response_from_history(history):
     full_response = response.choices[0].message.content.strip()
     logger.debug(f"[DEBUG] 応答全文: {full_response[:200]}...")
 
-    json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL) or \
-                 re.search(r"(\{.*?\"keywords\".*?\})", full_response, re.DOTALL)
-
-    emotion_summary = ""
+    json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
     if json_match:
         json_data_str = json_match.group(1)
         try:
@@ -56,9 +53,6 @@ def generate_gpt_response_from_history(history):
             structured_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
             if structured_data.get("データ種別") == "emotion":
-                composition = structured_data.get("構成比", {})
-                emotion_summary = extract_emotion_summary(composition)
-
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 save_dir = os.path.join(base_dir, "yumia_v5", "dialogue_structured")
                 save_path = os.path.join(save_dir, "emotion.json")
@@ -92,12 +86,9 @@ def generate_gpt_response_from_history(history):
     else:
         logger.warning("[WARNING] 応答にJSONが含まれていません")
 
-    # JSONを含む部分を除去（コードブロックあり・なし両対応）
     full_response_clean = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
-    full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\}", "", full_response_clean, flags=re.DOTALL)
-
-    display_text = full_response_clean.strip()
-    return f"{display_text}\n\n{emotion_summary}" if emotion_summary else display_text
+    full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
+    return full_response_clean.strip()
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     prompt_rule = load_user_prompt()
@@ -120,18 +111,19 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         return "", {}
 
     full_response = response.choices[0].message.content.strip()
-    json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL) or \
-                 re.search(r"(\{.*?\"keywords\".*?\})", full_response, re.DOTALL)
+    json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
 
     if json_match:
         emotion_data = json.loads(json_match.group(1))
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        display_text = full_response.split(json_match.group(0))[0].strip()
-        emotion_summary = extract_emotion_summary(emotion_data.get("構成比", {}))
+        composition = emotion_data.get("構成比", {})
+        emotion_summary = extract_emotion_summary(composition)
 
-        return f"{display_text}\n\n{emotion_summary}", emotion_data
+        full_response_clean = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
+        full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
+        return f"{full_response_clean.strip()}\n\n{emotion_summary}", emotion_data
     else:
         logger.warning("[WARNING] 感情推定にJSONが含まれていません")
         return full_response, {}
@@ -166,4 +158,5 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+
 
