@@ -1,4 +1,4 @@
-import sys
+""import sys
 import os
 import re
 import threading
@@ -25,8 +25,8 @@ class UserMessage(BaseModel):
 def sanitize_output_for_display(text: str) -> str:
     # タグ付きJSONを削除
     text = re.sub(r"```json\s*\{.*?\}\s*```", "", text, flags=re.DOTALL)
-    # タグなしJSONで「date」〜「keywords」を含むブロックを削除
-    text = re.sub(r"\{[^{}]*\"date\"[^{}]*\"keywords\"[^{}]*\}", "", text, flags=re.DOTALL)
+    # タグなしJSONのうち、"date": と "keywords": を含むブロックのみを削除
+    text = re.sub(r"\{[^{}]*\"date\"\s*:\s*\".*?\"[^{}]*\"keywords\"\s*:\s*\[.*?\][^{}]*\}", "", text, flags=re.DOTALL)
     return text.strip()
 
 # チャットエンドポイント（responseモード）
@@ -78,5 +78,4 @@ def get_history():
     except Exception as e:
         logger.exception("履歴取得中に例外が発生しました")
         raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
-
 
