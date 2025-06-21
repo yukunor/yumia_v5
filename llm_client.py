@@ -13,7 +13,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def extract_emotion_summary(composition: dict) -> str:
     if not composition:
         return ""
-    return "　（感情　" + ", ".join([f"{k}:{v}%" for k, v in composition.items()]) + "）"
+    return "　（感情　" + ", ".join([f"{k}:{v}%" for k, v in composition.items()]) + ")"
 
 def generate_gpt_response_from_history(history):
     logger.info("[START] generate_gpt_response_from_history")
@@ -87,7 +87,8 @@ def generate_gpt_response_from_history(history):
         logger.warning("[WARNING] 応答にJSONが含まれていません")
 
     full_response_clean = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
-    full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
+    full_response_clean = re.sub(r"\{[^{}]*\"date\"\s*:\s*\".*?\"[^{}]*\"keywords\"\s*:\s*\[.*?\][^{}]*\}", "", full_response_clean, flags=re.DOTALL)
+
     return full_response_clean.strip()
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
@@ -120,10 +121,9 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
         composition = emotion_data.get("構成比", {})
         emotion_summary = extract_emotion_summary(composition)
-
-        full_response_clean = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
-        full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
-        return f"{full_response_clean.strip()}\n\n{emotion_summary}", emotion_data
+        display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
+        display_text = re.sub(r"\{[^{}]*\"date\"\s*:\s*\".*?\"[^{}]*\"keywords\"\s*:\s*\[.*?\][^{}]*\}", "", display_text, flags=re.DOTALL)
+        return f"{display_text.strip()}\n\n{emotion_summary}", emotion_data
     else:
         logger.warning("[WARNING] 感情推定にJSONが含まれていません")
         return full_response, {}
