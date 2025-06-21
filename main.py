@@ -23,6 +23,7 @@ class UserMessage(BaseModel):
 # チャットエンドポイント（responseモード）
 @app.post("/chat")
 def chat(user_message: UserMessage):
+    print("✅ /chat エンドポイントに到達")
     try:
         user_input = user_message.message
 
