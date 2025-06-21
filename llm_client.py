@@ -159,4 +159,3 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
 
-
