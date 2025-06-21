@@ -3,7 +3,7 @@ import re
 import json
 import os
 from datetime import datetime
-from utils import load_system_prompt, load_user_prompt, logger
+from utils import load_system_prompt_cached, load_user_prompt, logger
 from module.memory.main_memory import handle_emotion
 from module.memory.oblivion_emotion import clean_old_emotions
 from module.context.context_selector import select_contextual_history
@@ -17,15 +17,15 @@ def extract_emotion_summary(composition: dict) -> str:
 
 def generate_gpt_response_from_history(history):
     logger.info("[START] generate_gpt_response_from_history")
-    system_prompt = load_system_prompt()
+    system_prompt = load_system_prompt_cached()
     user_prompt = load_user_prompt()
 
-    logger.info("[INFO] \u6587\u8108\u9078\u5225\u958b\u59cb")
+    logger.info("[INFO] 文脈選別開始")
     selected_history = select_contextual_history(history)
-    logger.info(f"[INFO] \u6587\u8108\u9078\u5225\u7d50\u679c: {len(selected_history)} \u4ef6")
+    logger.info(f"[INFO] 文脈選別結果: {len(selected_history)} 件")
 
     try:
-        logger.info("[INFO] OpenAI\u547c\u3073\u51fa\u3057\u958b\u59cb")
+        logger.info("[INFO] OpenAI呼び出し開始")
         response = openai.ChatCompletion.create(
             model="gpt-4o",
             messages=[
@@ -39,13 +39,13 @@ def generate_gpt_response_from_history(history):
             stream=False,
             timeout=30
         )
-        logger.info("[INFO] OpenAI\u5fdc\u7b54\u53d6\u5f97\u5b8c\u4e86")
+        logger.info("[INFO] OpenAI応答取得完了")
     except Exception as e:
-        logger.error(f"[ERROR] OpenAI\u547c\u3073\u51fa\u3057\u5931\u6557: {e}")
-        return "\u7533\u3057\u8a33\u3042\u308a\u307e\u305b\u3093\u3001\u3054\u4e3b\u4eba\u3002\u5fdc\u7b54\u751f\u6210\u4e2d\u306b\u30a8\u30e9\u30fc\u304c\u767a\u751f\u3057\u307e\u3057\u305f\u3002"
+        logger.error(f"[ERROR] OpenAI呼び出し失敗: {e}")
+        return "申し訳ありません、ご主人。応答生成中にエラーが発生しました。"
 
     full_response = response.choices[0].message.content.strip()
-    logger.debug(f"[DEBUG] \u5fdc\u7b54\u5168\u6587: {full_response[:200]}...")
+    logger.debug(f"[DEBUG] 応答全文: {full_response[:200]}...")
 
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
     emotion_summary = ""
@@ -55,18 +55,18 @@ def generate_gpt_response_from_history(history):
             structured_data = json.loads(json_data_str)
             structured_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
-            if structured_data.get("\u30c7\u30fc\u30bf\u7a2e\u5225") == "emotion":
-                composition = structured_data.get("\u69cb\u6210\u6bd4", {})
+            if structured_data.get("データ種別") == "emotion":
+                composition = structured_data.get("構成比", {})
                 emotion_summary = extract_emotion_summary(composition)
 
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 save_dir = os.path.join(base_dir, "yumia_v5", "dialogue_structured")
                 save_path = os.path.join(save_dir, "emotion.json")
 
-                logger.debug(f"[DEBUG] \u69cb\u9020\u5316\u30c7\u30fc\u30bf\u4fdd\u5b58\u5148: {save_path}")
+                logger.debug(f"[DEBUG] 構造化データ保存先: {save_path}")
 
                 if not os.path.isdir(save_dir):
-                    logger.error(f"\u4fdd\u5b58\u30c7\u30a3\u30ec\u30af\u30c8\u30ea\u304c\u5b58\u5728\u3057\u307e\u305b\u3093: {save_dir}")
+                    logger.error(f"保存ディレクトリが存在しません: {save_dir}")
                     return full_response.split("```json")[0].strip()
 
                 if os.path.exists(save_path):
@@ -74,7 +74,7 @@ def generate_gpt_response_from_history(history):
                         try:
                             data = json.load(f)
                         except json.JSONDecodeError:
-                            logger.warning("[WARNING] emotion.json \u304c\u4e0d\u6b63\u306a\u5f62\u5f0f\u306e\u305f\u3081\u521d\u671f\u5316")
+                            logger.warning("[WARNING] emotion.json が不正な形式のため初期化")
                             data = []
                 else:
                     data = []
@@ -84,31 +84,29 @@ def generate_gpt_response_from_history(history):
                 with open(save_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)
 
-                logger.info("[INFO] \u611f\u60c5\u30c7\u30fc\u30bf\u4fdd\u5b58\u5b8c\u4e86")
+                logger.info("[INFO] 感情データ保存完了")
                 handle_emotion(structured_data)
                 clean_old_emotions()
             else:
-                logger.info(f"[INFO] \u30c7\u30fc\u30bf\u7a2e\u5225\u304c emotion \u3067\u306f\u306a\u3044: {structured_data.get('データ種別')}")
+                logger.info(f"[INFO] データ種別が emotion ではない: {structured_data.get('データ種別')}")
 
         except Exception as e:
-            logger.error(f"[ERROR] JSON\u51e6\u7406\u5931\u6557: {e}")
+            logger.error(f"[ERROR] JSON処理失敗: {e}")
     else:
-        logger.warning("[WARNING] \u5fdc\u7b54\u306bJSON\u304c\u542b\u307e\u308c\u3066\u3044\u307e\u305b\u3093")
+        logger.warning("[WARNING] 応答にJSONが含まれていません")
 
     display_text = full_response.split("```json")[0].strip()
     return f"{display_text}\n\n{emotion_summary}" if emotion_summary else display_text
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
-    with open("user_prompt.txt", encoding="utf-8") as f:
-        prompt_rule = f.read()
-
-    full_prompt = f"{prompt_rule}\n\u30e6\u30fc\u30b6\u30fc\u767a\u8a00: {user_input}"
+    prompt_rule = load_user_prompt()
+    full_prompt = f"{prompt_rule}\nユーザー発言: {user_input}"
 
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": load_system_prompt()},
+                {"role": "system", "content": load_system_prompt_cached()},
                 {"role": "user", "content": full_prompt}
             ],
             max_tokens=1000,
@@ -117,9 +115,9 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
             stream=False,
             timeout=30
         )
-        logger.info("[INFO] \u611f\u60c5\u63a8\u5b9a\u5b8c\u4e86")
+        logger.info("[INFO] 感情推定完了")
     except Exception as e:
-        logger.error(f"[ERROR] \u611f\u60c5\u63a8\u5b9a\u5931\u6557: {e}")
+        logger.error(f"[ERROR] 感情推定失敗: {e}")
         return "", {}
 
     full_response = response.choices[0].message.content.strip()
@@ -141,7 +139,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         return full_response, {}
 
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
-    system_prompt = load_system_prompt()
+    system_prompt = load_system_prompt_cached()
     user_prompt = load_user_prompt()
 
     reference_text = "\n\n【参考感情データ】\n"
