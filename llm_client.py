@@ -46,7 +46,6 @@ def generate_gpt_response_from_history(history):
     logger.debug(f"[DEBUG] 応答全文: {full_response[:200]}...")
 
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
-    emotion_summary = ""
     if json_match:
         json_data_str = json_match.group(1)
         try:
@@ -54,9 +53,6 @@ def generate_gpt_response_from_history(history):
             structured_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
             if structured_data.get("データ種別") == "emotion":
-                composition = structured_data.get("構成比", {})
-                emotion_summary = extract_emotion_summary(composition)
-
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 save_dir = os.path.join(base_dir, "yumia_v5", "dialogue_structured")
                 save_path = os.path.join(save_dir, "emotion.json")
@@ -90,8 +86,7 @@ def generate_gpt_response_from_history(history):
     else:
         logger.warning("[WARNING] 応答にJSONが含まれていません")
 
-    display_text = full_response.split("```json")[0].strip()
-    return f"{display_text}\n\n{emotion_summary}" if emotion_summary else display_text
+    return full_response.split("```json")[0].strip()
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     prompt_rule = load_user_prompt()
@@ -122,11 +117,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
         display_text = full_response.split("```json")[0].strip()
-        composition = emotion_data.get("構成比", {})
-        emotion_summary = extract_emotion_summary(composition)
-
-        logger.debug(f"[DEBUG] 推定感情データ: {emotion_data}")
-        return f"{display_text}\n\n{emotion_summary}", emotion_data
+        return display_text, emotion_data
     else:
         logger.warning("[WARNING] 感情推定にJSONが含まれていません")
         return full_response, {}
@@ -161,4 +152,5 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+
 
