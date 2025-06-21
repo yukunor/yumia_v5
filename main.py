@@ -29,7 +29,7 @@ def chat(user_message: UserMessage):
         append_history("user", user_input)
 
         # ステップ②：感情推定＋応答生成（response系）
-        response, emotion_data = run_response_pipeline(user_input)
+        append_history("system", response_text)
 
         # ステップ③：応答を履歴に追加
         append_history("system", response["response_text"])
