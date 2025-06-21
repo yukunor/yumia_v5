@@ -1,4 +1,5 @@
 import json
+import os
 from utils import logger  # 共通ロガーをインポート
 
 def load_index():
@@ -29,11 +30,15 @@ def search_similar_emotions(now_emotion: dict) -> dict:
         if not is_similar_composition(current_composition, item["構成比"]):
             continue
 
-        # 保存先: memory/long/xxx.json → カテゴリ抽出
-        category = item["保存先"].split("/")[1]
+        # 保存先: memory/long/xxx.json または memory\long\xxx.json に対応
+        normalized_path = os.path.normpath(item["保存先"])
+        parts = normalized_path.split(os.sep)
+        category = parts[1] if len(parts) > 1 else "unknown"
+
         if category in categorized and len(categorized[category]) < 10:
             categorized[category].append(item)
 
     logger.info(f"[検索結果] long: {len(categorized['long'])}件, intermediate: {len(categorized['intermediate'])}件, short: {len(categorized['short'])}件")
 
     return categorized
+
