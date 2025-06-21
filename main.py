@@ -30,21 +30,26 @@ def chat(user_message: UserMessage):
     print("✅ /chat エンドポイントに到達")
     try:
         user_input = user_message.message
-        print("✅ ユーザー入力:", user_input)
+        print("📥 ユーザー入力取得完了:", user_input)
 
         append_history("user", user_input)
-        print("✅ ユーザー履歴追加完了")
+        print("📝 ユーザー履歴追加完了")
 
+        print("🔍 応答生成と感情推定 開始")
         response, emotion_data = run_response_pipeline(user_input)
-        print("✅ 応答生成完了")
+        print("✅ 応答と感情データ取得 完了")
 
+        print("🧼 応答のサニタイズ 開始")
         sanitized_response = sanitize_output_for_display(response)
+        print("✅ サニタイズ完了:", sanitized_response)
+
         append_history("system", sanitized_response)
-        print("✅ 応答履歴追加完了")
+        print("📝 応答履歴追加完了")
 
+        print("💾 感情保存スレッド開始")
         threading.Thread(target=memory.handle_emotion, args=(emotion_data,)).start()
-        print("✅ 感情保存スレッド開始")
 
+        print("📤 応答と履歴を返却")
         return {
             "message": sanitized_response,
             "history": load_history()
