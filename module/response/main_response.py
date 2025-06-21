@@ -13,8 +13,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         logger.info("[TIMER] ▼ ステップ① 感情推定 開始")
+        print("🧠 ステップ①: 感情推定 開始")
         t1 = time.time()
         response_text, emotion_data = estimate_emotion(user_input)
+        print("🧠 感情推定結果:", emotion_data)
         logger.info(f"[TIMER] ▲ ステップ① 感情推定 完了: {time.time() - t1:.2f}秒")
 
         if not isinstance(emotion_data, dict):
@@ -32,6 +34,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         logger.info("[TIMER] ▼ ステップ② 類似感情検索 開始")
+        print("🔍 ステップ②: 類似感情検索 開始")
         t2 = time.time()
         logger.info(f"[検索] 主感情一致かつ構成比類似の候補を抽出中... 現在の主感情: {main_emotion}")
         top30_emotions = search_similar_emotions(now_emotion)
@@ -40,6 +43,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info(f"[検索結果] long: {len(top30_emotions.get('long', []))}件, intermediate: {len(top30_emotions.get('intermediate', []))}件, short: {len(top30_emotions.get('short', []))}件")
 
         logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
+        print("🧩 ステップ③: キーワードマッチング 開始")
         t3 = time.time()
         long_matches = match_long_keywords(now_emotion, top30_emotions.get("long", []))
         intermediate_matches = match_intermediate_keywords(now_emotion, top30_emotions.get("intermediate", []))
@@ -59,8 +63,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         logger.info("[TIMER] ▼ ステップ④ GPT応答生成 開始")
+        print("💬 ステップ④: GPT応答生成 開始")
         t4 = time.time()
         response = generate_gpt_response(user_input, reference_emotions)
+        print("📨 生成された返信:", response)
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
         logger.info("[INFO] GPT応答生成完了")
 
@@ -68,5 +74,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
 
+    print("💾 保存対象の感情データ:", now_emotion)
     return response, now_emotion
 
