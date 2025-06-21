@@ -69,3 +69,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     return response, now_emotion
+
