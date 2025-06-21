@@ -12,7 +12,7 @@ def test_get_memory_category():
         },
         "重み": 100
     }
-    category = get_memory_category(sample_emotion)
+    category = get_memory_category(sample_emotion["重み"])
     assert category in ["short", "intermediate", "long"], "不正なカテゴリ"
 
 def test_is_similar_composition_exact_match():
