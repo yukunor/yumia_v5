@@ -13,10 +13,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         logger.info("[TIMER] ▼ ステップ① 感情推定 開始")
-        print("🧠 ステップ①: 感情推定 開始")
+        print("🧐 ステップ①: 感情推定 開始")
         t1 = time.time()
         response_text, emotion_data = estimate_emotion(user_input)
-        print("🧠 感情推定結果:", emotion_data)
+        print("🧐 感情推定結果:", emotion_data)
         logger.info(f"[TIMER] ▲ ステップ① 感情推定 完了: {time.time() - t1:.2f}秒")
 
         if not isinstance(emotion_data, dict):
@@ -43,7 +43,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info(f"[検索結果] long: {len(top30_emotions.get('long', []))}件, intermediate: {len(top30_emotions.get('intermediate', []))}件, short: {len(top30_emotions.get('short', []))}件")
 
         logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
-        print("🧩 ステップ③: キーワードマッチング 開始")
+        print("🤩 ステップ③: キーワードマッチング 開始")
         t3 = time.time()
         long_matches = match_long_keywords(now_emotion, top30_emotions.get("long", []))
         intermediate_matches = match_intermediate_keywords(now_emotion, top30_emotions.get("intermediate", []))
@@ -74,6 +74,5 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
 
-    print("💾 保存対象の感情データ:", now_emotion)
+    print("📎 保存対象の感情データ:", now_emotion)
     return response, now_emotion
-
