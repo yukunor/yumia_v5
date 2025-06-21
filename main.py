@@ -9,7 +9,7 @@ import threading
 
 from utils import append_history, load_history
 from module.response.main_response import run_response_pipeline
-import module.memory.main_memory as memory  # memory形式で保存（関数名を指定しない）
+import module.memory.main_memory as memory  # 関数名を指定せずmemory形式でインポート
 from utils import logger  # utils/logger.py のロガーを使用
 
 # FastAPIアプリケーション
