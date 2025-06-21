@@ -121,9 +121,11 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
         composition = emotion_data.get("構成比", {})
         emotion_summary = extract_emotion_summary(composition)
+
         display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
         display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
-        return f"{display_text.strip()}\n\n{emotion_summary}", emotion_data
+        clean_text = display_text.strip()
+        return f"{clean_text}\n\n{emotion_summary}", emotion_data
     else:
         logger.warning("[WARNING] 感情推定にJSONが含まれていません")
         return full_response, {}
