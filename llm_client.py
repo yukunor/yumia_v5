@@ -8,12 +8,15 @@ from module.memory.main_memory import handle_emotion
 from module.memory.oblivion_emotion import clean_old_emotions
 from module.context.context_selector import select_contextual_history
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # ← 明示的に環境変数から取得
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise RuntimeError("OPENAI_API_KEY が環境変数に設定されていません")
+openai.api_key = api_key
 
 def extract_emotion_summary(composition: dict) -> str:
     if not composition:
         return ""
-    return "\u3000\uff08\u611f\u60c5\u3000" + ", ".join([f"{k}:{v}%" for k, v in composition.items()]) + "\uff09"
+    return "　（感情　" + ", ".join([f"{k}:{v}%" for k, v in composition.items()]) + "）"
 
 def generate_gpt_response_from_history(history):
     logger.info("[START] generate_gpt_response_from_history")
@@ -65,9 +68,7 @@ def generate_gpt_response_from_history(history):
 
                 logger.debug(f"[DEBUG] 構造化データ保存先: {save_path}")
 
-                if not os.path.isdir(save_dir):
-                    logger.error(f"保存ディレクトリが存在しません: {save_dir}")
-                    return full_response.split("```json")[0].strip()
+                os.makedirs(save_dir, exist_ok=True)
 
                 if os.path.exists(save_path):
                     with open(save_path, "r", encoding="utf-8") as f:
