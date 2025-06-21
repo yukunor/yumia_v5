@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 import threading
-import traceback  # ←追記
+import traceback  # ←追加済み
 
 from utils import append_history, load_history
 from module.response.main_response import run_response_pipeline
@@ -45,7 +45,7 @@ def chat(user_message: UserMessage):
         }
 
     except Exception as e:
-        logger.exception("チャット中に例外が発生しました")  # ← ここを修正
+        logger.exception("チャット中に例外が発生しました")  # ← Tracebackを含めてログ出力
         raise HTTPException(status_code=500, detail="チャット中にエラーが発生しました。")
 
 # UI配信用エンドポイント
@@ -59,6 +59,7 @@ def get_history():
     try:
         return {"history": load_history()}
     except Exception as e:
-        logger.exception("履歴取得中に例外が発生しました")  # ← ここも修正
+        logger.exception("履歴取得中に例外が発生しました")  # ← Tracebackを含めてログ出力
         raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
+
 
