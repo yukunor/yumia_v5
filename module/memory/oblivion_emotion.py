@@ -48,9 +48,13 @@ def clean_old_emotions():
                 try:
                     with open(entry["保存先"], "r", encoding="utf-8") as f2:
                         data = json.load(f2)
-                    filtered = [d for d in data if d.get("date") != entry["date"]]
-                    with open(entry["保存先"], "w", encoding="utf-8") as f2:
-                        json.dump(filtered, f2, ensure_ascii=False, indent=4)
+                    if isinstance(data, dict) and "履歴" in data:
+                        filtered = [d for d in data["履歴"] if d.get("date") != entry["date"]]
+                        data["履歴"] = filtered
+                        with open(entry["保存先"], "w", encoding="utf-8") as f2:
+                            json.dump(data, f2, ensure_ascii=False, indent=4)
+                    else:
+                        logger.warning(f"[WARN] 想定外の形式: {entry['保存先']}")
                 except Exception as e:
                     logger.error(f"[ERROR] memory削除失敗: {e}")
             else:
@@ -80,3 +84,4 @@ def clean_old_emotions():
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     logger.info("[INFO] 古い感情データをoblivionに移動・削除処理を実施し、indexとmemoryを更新しました。")
+
