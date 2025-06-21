@@ -68,4 +68,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
 
-    return response_text, now_emotion
+    return response, now_emotion
