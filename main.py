@@ -32,7 +32,7 @@ def chat(user_message: UserMessage):
         response, emotion_data = run_response_pipeline(user_input)
 
         # ステップ③：応答を履歴に追加
-        append_history("system", response)
+        append_history("system", response["response_text"])
 
         # ステップ④：感情保存を非同期実行（保存失敗しても応答は返す）
         threading.Thread(target=memory.handle_emotion, args=(emotion_data,)).start()
