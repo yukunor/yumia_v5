@@ -41,4 +41,3 @@ def search_similar_emotions(now_emotion: dict) -> dict:
     logger.info(f"[検索結果] long: {len(categorized['long'])}件, intermediate: {len(categorized['intermediate'])}件, short: {len(categorized['short'])}件")
 
     return categorized
-
