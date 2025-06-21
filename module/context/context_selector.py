@@ -1,8 +1,9 @@
-import openai
+from openai import OpenAI
 import json
 from datetime import datetime, timedelta
-
 from utils import logger
+
+client = OpenAI()
 
 def parse_timestamp(entry):
     try:
@@ -21,7 +22,7 @@ def is_contextually_related(message_a, message_b):
     )
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "あなたは日本語に堪能な対話分析AIです。"},
@@ -61,3 +62,4 @@ def select_contextual_history(full_history, max_turns=10):
         index -= 1
 
     return selected
+
