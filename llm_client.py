@@ -10,10 +10,10 @@ from module.context.context_selector import select_contextual_history
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def extract_emotion_summary(composition: dict) -> str:
+def extract_emotion_summary(composition: dict, main_emotion: str = "感情") -> str:
     if not composition:
         return ""
-    return "　（感情　" + ", ".join([f"{k}:{v}%" for k, v in composition.items()]) + ")"
+    return f"　（感情　{main_emotion}:" + ", ".join([f"{k}:{v}%" for k, v in composition.items()]) + ")"
 
 def generate_gpt_response_from_history(history):
     logger.info("[START] generate_gpt_response_from_history")
@@ -119,8 +119,9 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
+        main_emotion = emotion_data.get("主感情", "感情")
         composition = emotion_data.get("構成比", {})
-        emotion_summary = extract_emotion_summary(composition)
+        emotion_summary = extract_emotion_summary(composition, main_emotion)
 
         display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
         display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
