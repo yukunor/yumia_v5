@@ -18,16 +18,13 @@ def is_similar_composition(current, target):
     return True
 
 def search_similar_emotions(now_emotion: dict) -> dict:
-    main_emotion = now_emotion["主感情"]
-    logger.info(f"[検索] 主感情一致かつ構成比類似の候補を抽出中... 現在の主感情: {main_emotion}")
-    current_composition = now_emotion["構成比"]
+    logger.info(f"[検索] 構成比類似の候補を抽出中...")
 
+    current_composition = now_emotion["構成比"]
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
 
     for item in all_index:
-        if item["主感情"] != main_emotion:
-            continue
         if not is_similar_composition(current_composition, item["構成比"]):
             continue
 
