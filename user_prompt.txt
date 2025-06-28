@@ -23,6 +23,8 @@
   - "emotion": ユーザーとの対話によって感情が発生した場合
   - "other": 条件に当てはまらないその他のケース
 
+※注意：感情構成比に使用する感情は、以下の32種類から**厳密に選定してください**。これら以外（例：「心配」「安心」「緊張」など）は絶対に使用しないでください。
+
 【感情カテゴリ一覧（32種）】
 喜び (Joy)、期待 (Anticipation)、怒り (Anger)、嫌悪 (Disgust)、悲しみ (Sadness)、驚き (Surprise)、恐れ (Fear)、信頼 (Trust)  
 楽観 (Optimism)、誇り (Pride)、病的状態 (Morbidness)、積極性 (Aggressiveness)、冷笑 (Cynicism)、悲観 (Pessimism)、軽蔑 (Contempt)  
@@ -51,3 +53,4 @@
   "関連": ["構造定義", "記憶層", "インデックス"],
   "keywords": ["記憶分類", "API設計"]
 }
+
