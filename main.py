@@ -22,8 +22,10 @@ class UserMessage(BaseModel):
     message: str
 
 def sanitize_output_for_display(text: str) -> str:
-    # JSONコードブロックだけを削除（emotion_summaryには触れない）
+    # JSONコードブロックを削除
     text = re.sub(r"```json\s*\{.*?\}\s*```", "", text, flags=re.DOTALL)
+    # 誤って応答文に混入した感情構成比表示を削除
+    text = re.sub(r"（感情\s+[^\n)]+）", "", text)
     return text.strip()
 
 @app.post("/chat")
