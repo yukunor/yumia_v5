@@ -14,6 +14,7 @@ from utils import append_history, load_history
 from module.response.main_response import run_response_pipeline
 import module.memory.main_memory as memory
 from utils import logger
+from llm_client import extract_emotion_summary  # ← 追加
 
 app = FastAPI()
 
@@ -38,6 +39,10 @@ def chat(user_message: UserMessage):
         print("🔍 応答生成と感情推定 開始")
         response, emotion_data = run_response_pipeline(user_input)
         print("✅ 応答と感情データ取得 完了")
+
+        # ← 感情データの内容を確認
+        print("🧾 取得した感情データの内容:", emotion_data)
+        print("📊 構成比サマリ:", extract_emotion_summary(emotion_data.get("構成比", {})))
 
         print("🧼 応答のサニタイズ 開始")
         sanitized_response = sanitize_output_for_display(response)
@@ -69,6 +74,9 @@ def get_history():
     try:
         return {"history": load_history()}
     except Exception as e:
+        logger.exception("履歴取得中に例外が発生しました")
+        raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
+
         logger.exception("履歴取得中に例外が発生しました")
         raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
 
