@@ -1,106 +1,168 @@
-from llm_client import generate_emotion_from_prompt as estimate_emotion
-from response.response_index import search_similar_emotions
-from response.response_long import match_long_keywords
-from response.response_intermediate import match_intermediate_keywords
-from response.response_short import match_short_keywords
-from llm_client import generate_gpt_response, extract_emotion_summary
-from utils import logger
-import time
-import copy
+from openai import OpenAI
+import re
+import json
+import os
+from datetime import datetime
+from utils import load_system_prompt_cached, load_user_prompt, logger
+from module.memory.main_memory import handle_emotion
+from module.memory.oblivion_emotion import clean_old_emotions
+from module.context.context_selector import select_contextual_history
 
-def extract_emotion_summary_fixed(composition: dict) -> str:
-    if not composition:
-        return ""
-    sorted_items = sorted(composition.items(), key=lambda x: -x[1])
-    return "\u3000（感情　" + ", ".join([f"{k}:{v}%" for k, v in sorted_items]) + ")"
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def run_response_pipeline(user_input: str) -> tuple[str, dict]:
-    initial_emotion = {}
+def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義") -> str:
+    if not emotion_data:
+        return f"　（感情　{main_emotion}）"
+    composition = emotion_data.get("構成比")
+    if not isinstance(composition, dict):
+        logger.warning("[WARNING] '構成比' が存在しないか辞書ではありません")
+        return f"　（感情　{main_emotion}）"
+    filtered = {k: v for k, v in composition.items() if isinstance(v, (int, float))}
+    ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
+    return f"　（感情　{ratio}）"
 
-    try:
-        logger.info("[TIMER] ▼ ステップ① 感情推定 開始")
-        print("\U0001f9d0 ステップ①: 感情推定 開始")
-        t1 = time.time()
-        _, initial_emotion = estimate_emotion(user_input)
-        print("\U0001f9d0 感情推定結果:", initial_emotion)
-        logger.info(f"[TIMER] ▲ ステップ① 感情推定 完了: {time.time() - t1:.2f}秒")
+def generate_gpt_response_from_history(history):
+    logger.info("[START] generate_gpt_response_from_history")
+    system_prompt = load_system_prompt_cached()
+    user_prompt = load_user_prompt()
 
-        if not isinstance(initial_emotion, dict):
-            logger.error(f"[ERROR] 感情推定結果が辞書形式ではありません: {type(initial_emotion)} - {initial_emotion}")
-            initial_emotion = {}
-
-    except Exception as e:
-        logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
-        raise
+    logger.info("[INFO] 文脈選別開始")
+    selected_history = select_contextual_history(history)
+    logger.info(f"[INFO] 文脈選別結果: {len(selected_history)} 件")
 
     try:
-        logger.info("[TIMER] ▼ ステップ② 類似感情検索 開始")
-        print("\U0001f50d ステップ②: 類似感情検索 開始")
-        t2 = time.time()
-        top30_emotions = search_similar_emotions(initial_emotion)
-        logger.info(f"[TIMER] ▲ ステップ② 類似感情検索 完了: {time.time() - t2:.2f}秒")
-
-        logger.info(f"[検索結果] long: {len(top30_emotions.get('long', []))}件, intermediate: {len(top30_emotions.get('intermediate', []))}件, short: {len(top30_emotions.get('short', []))}件")
-
-        logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
-        print("\U0001f9e9 ステップ③: キーワードマッチング 開始")
-        t3 = time.time()
-        long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
-        intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
-        short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
-        logger.info(f"[TIMER] ▲ ステップ③ キーワードマッチ 完了: {time.time() - t3:.2f}秒")
-
-        reference_emotions = long_matches + intermediate_matches + short_matches
-
-        if not reference_emotions:
-            logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
-            print("📬 類似感情なし → LLM 応答を使用します")
-            response = generate_gpt_response(user_input, [])
-            logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
-            logger.info("[INFO] 類似感情がなかったため、再推定せず初期感情を使用します")
-
-            summary = extract_emotion_summary_fixed(initial_emotion.get("構成比", {}))
-            print(summary)
-            logger.info(f"[INFO] 出力感情構成比: {summary}")
-            return response, initial_emotion
-
+        logger.info("[INFO] OpenAI呼び出し開始")
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                *[{"role": entry["role"], "content": entry["message"]} for entry in selected_history],
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.7,
+            top_p=1.0
+        )
+        logger.info("[INFO] OpenAI応答取得完了")
     except Exception as e:
-        logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
-        raise
+        logger.error(f"[ERROR] OpenAI呼び出し失敗: {e}")
+        return "申し訳ありません、ご主人。応答生成中にエラーが発生しました。"
+
+    full_response = response.choices[0].message.content.strip()
+    logger.debug(f"[DEBUG] 応答全文: {full_response[:200]}...")
+
+    json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
+    if json_match:
+        json_data_str = json_match.group(1)
+        try:
+            structured_data = json.loads(json_data_str)
+            structured_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
+
+            if structured_data.get("データ種別") == "emotion":
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                save_dir = os.path.join(base_dir, "yumia_v5", "dialogue_structured")
+                save_path = os.path.join(save_dir, "emotion.json")
+
+                logger.debug(f"[DEBUG] 構造化データ保存先: {save_path}")
+                os.makedirs(save_dir, exist_ok=True)
+
+                if os.path.exists(save_path):
+                    with open(save_path, "r", encoding="utf-8") as f:
+                        try:
+                            data = json.load(f)
+                        except json.JSONDecodeError:
+                            logger.warning("[WARNING] emotion.json が不正な形式のため初期化")
+                            data = []
+                else:
+                    data = []
+
+                data.append(structured_data)
+
+                with open(save_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+
+                logger.info("[INFO] 感情データ保存完了")
+                handle_emotion(structured_data)
+                clean_old_emotions()
+            else:
+                logger.info(f"[INFO] データ種別が emotion ではない: {structured_data.get('データ種別')}")
+        except Exception as e:
+            logger.error(f"[ERROR] JSON処理失敗: {e}")
+    else:
+        logger.warning("[WARNING] 応答にJSONが含まれていません")
+
+    full_response_clean = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
+    full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
+
+    return full_response_clean.strip()
+
+def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
+    prompt_rule = load_user_prompt()
+    full_prompt = f"{prompt_rule}\nユーザー発言: {user_input}"
 
     try:
-        logger.info("[TIMER] ▼ ステップ④ GPT応答生成 開始")
-        print("💬 ステップ④: GPT応答生成 開始")
-        t4 = time.time()
-        response = generate_gpt_response(user_input, reference_emotions)
-        logger.debug(f"[DEBUG] GPT生成応答: {response}")
-        print("📨 生成された返信:", response)
-        logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
-
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": load_system_prompt_cached()},
+                {"role": "user", "content": full_prompt}
+            ],
+            max_tokens=1000,
+            temperature=0.7,
+            top_p=1.0
+        )
+        logger.info("[INFO] 感情推定完了")
     except Exception as e:
-        logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
-        raise
+        logger.error(f"[ERROR] 感情推定失敗: {e}")
+        return "", {}
+
+    full_response = response.choices[0].message.content.strip()
+    json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
+
+    if json_match:
+        emotion_data = json.loads(json_match.group(1))
+        if not emotion_data.get("date"):
+            emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        composition = emotion_data.get("構成比", {})
+        main_emotion = emotion_data.get("主感情", "未定義")
+        emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
+
+        display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
+        display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
+        clean_text = display_text.strip()
+        return f"{clean_text}\n\n{emotion_summary}", emotion_data
+    else:
+        logger.warning("[WARNING] 感情推定にJSONが含まれていません")
+        return full_response, {}
+
+def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
+    system_prompt = load_system_prompt_cached()
+    user_prompt = load_user_prompt()
+
+    reference_text = "\n\n【参考感情データ】\n"
+    for i, item in enumerate(reference_emotions, 1):
+        reference_text += f"\n● ケース{i}\n"
+        reference_text += f"主感情: {item.get('主感情')}\n"
+        reference_text += f"構成比: {item.get('構成比')}\n"
+        reference_text += f"状況: {item.get('状況')}\n"
+        reference_text += f"心理反応: {item.get('心理反応')}\n"
+        reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
+
+    prompt = f"{user_prompt}\n\nユーザー発言: {user_input}\n{reference_text}"
 
     try:
-        logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
-        print("🔁 ステップ⑤: 応答感情再推定 開始")
-        t5 = time.time()
-
-        if not isinstance(response, str):
-            logger.error(f"[ERROR] 応答の型が文字列ではない: {type(response)} - {response}")
-
-        safe_response = copy.deepcopy(response)
-        _, response_emotion = estimate_emotion(safe_response)
-        logger.debug(f"[DEBUG] 応答に対する感情推定結果: {response_emotion}")
-        print("📂 保存対象の感情データ:", response_emotion)
-        summary = extract_emotion_summary_fixed(response_emotion.get("構成比", {}))
-        print(summary)
-        logger.info(f"[INFO] 出力感情構成比: {summary}")
-        logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
-
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000,
+            temperature=0.7,
+            top_p=1.0
+        )
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
-        response_emotion = initial_emotion
-
-    return response, response_emotion
-
+        logger.error(f"[ERROR] 応答生成失敗: {e}")
+        return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
