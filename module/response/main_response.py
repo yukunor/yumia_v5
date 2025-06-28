@@ -56,6 +56,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print("📭 類似感情なし → LLM 応答を使用します")
             response = generate_gpt_response(user_input, [])
             logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
+            logger.info("[INFO] 類似感情がなかったため、再推定せず初期感情を使用します")
             return response, initial_emotion
 
     except Exception as e:
