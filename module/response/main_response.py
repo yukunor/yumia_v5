@@ -53,6 +53,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
+            print("📭 類似感情なし → LLM 応答を使用します")
             response = generate_gpt_response(user_input, [])
             logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
             return response, initial_emotion
@@ -79,7 +80,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("🔁 ステップ⑤: 応答感情再推定 開始")
         t5 = time.time()
 
-        # 応答の状態確認
         if not isinstance(response, str):
             logger.error(f"[ERROR] 応答の型が文字列ではない: {type(response)} - {response}")
 
@@ -94,4 +94,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         response_emotion = initial_emotion
 
     return response, response_emotion
-
