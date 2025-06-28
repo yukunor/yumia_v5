@@ -50,11 +50,12 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
         reference_emotions = long_matches + intermediate_matches + short_matches
 
-        # 👇 ここが追加ポイント！
+        # 類似感情がなかった場合：そのまま LLM 応答を使用し、感情再推定まで行う
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
             response = generate_gpt_response(user_input, [])
-            return response, initial_emotion
+            _, response_emotion = estimate_emotion(response)
+            return response, response_emotion
 
     except Exception as e:
         logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
