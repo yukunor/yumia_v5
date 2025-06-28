@@ -10,17 +10,18 @@ from module.context.context_selector import select_contextual_history
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def extract_emotion_summary(composition: dict, main_emotion: str = "未定義") -> str:
-    if not composition:
+def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義") -> str:
+    if not emotion_data:
         return ""
-    unique = {}
-    for k, v in composition.items():
-        if k in unique:
-            unique[k] += v
-        else:
-            unique[k] = v
-    ratio = ", ".join([f"{k}:{v}%" for k, v in unique.items()])
-    return f"　（感情　{main_emotion}: {ratio}）"
+
+    composition = emotion_data.get("構成比")
+    if not isinstance(composition, dict):
+        logger.warning("[WARNING] '構成比' が存在しないか辞書ではありません")
+        return f"　（感情　{main_emotion}）"
+
+    filtered = {k: v for k, v in composition.items() if isinstance(v, (int, float))}
+    ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
+    return f"　（感情　{ratio}）"
 
 def generate_gpt_response_from_history(history):
     logger.info("[START] generate_gpt_response_from_history")
@@ -128,7 +129,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
         composition = emotion_data.get("構成比", {})
         main_emotion = emotion_data.get("主感情", "未定義")
-        emotion_summary = extract_emotion_summary(composition, main_emotion)
+        emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
 
         display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
         display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
