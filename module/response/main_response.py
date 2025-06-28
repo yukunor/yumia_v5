@@ -46,15 +46,27 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
         intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
         short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
+        reference_emotions = long_matches + intermediate_matches + short_matches
+        logger.debug(f"[DEBUG] マッチした参考感情数: {len(reference_emotions)} 件")
         logger.info(f"[TIMER] ▲ ステップ③ キーワードマッチ 完了: {time.time() - t3:.2f}秒")
 
-        reference_emotions = long_matches + intermediate_matches + short_matches
-
-        # 類似感情がなかった場合：そのまま LLM 応答を使用し、感情再推定まで行う
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
+            print("💬 ステップ④: GPT応答生成（類似感情なし）")
             response = generate_gpt_response(user_input, [])
-            _, response_emotion = estimate_emotion(response)
+            print("📨 生成された返信:", response)
+
+            try:
+                logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
+                print("🔁 ステップ⑤: 応答感情再推定 開始")
+                t5 = time.time()
+                _, response_emotion = estimate_emotion(response)
+                print("💾 保存対象の感情データ:", response_emotion)
+                logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
+            except Exception as e:
+                logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
+                response_emotion = initial_emotion
+
             return response, response_emotion
 
     except Exception as e:
