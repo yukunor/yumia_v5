@@ -1,12 +1,17 @@
 import json
 from utils import logger  # 共通ロガーをインポート
 
-def load_emotion_from_path(path):
+def load_emotion_by_date(path: str, target_date: str) -> dict | None:
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return None
+            data = json.load(f)
+            if "履歴" in data:
+                for entry in data["履歴"]:
+                    if entry.get("date") == target_date:
+                        return entry
+    except Exception as e:
+        logger.warning(f"[WARN] データ取得失敗: {path} ({e})")
+    return None
 
 def compute_composition_difference(comp1, comp2):
     keys = set(k for k in comp1.keys() | comp2.keys())
@@ -20,13 +25,14 @@ def match_intermediate_keywords(now_emotion: dict, index_data: list) -> list:
 
     for item in index_data:
         path = item.get("保存先")
-        data = load_emotion_from_path(path)
-        if not data:
+        date = item.get("date")
+        target_emotion = load_emotion_by_date(path, date)
+        if not target_emotion:
             continue
 
-        target_composition = data.get("構成比", {})
+        target_composition = target_emotion.get("構成比", {})
         diff_score = compute_composition_difference(current_composition, target_composition)
-        results.append((diff_score, data))
+        results.append((diff_score, target_emotion))
 
     # 差分スコアが小さい順にソート
     results.sort(key=lambda x: x[0])
