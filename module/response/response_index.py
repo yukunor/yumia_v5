@@ -33,9 +33,8 @@ def search_similar_emotions(now_emotion: dict) -> dict:
         # スラッシュ・バックスラッシュ両方に対応して分割
         normalized_path = os.path.normpath(item["保存先"])
         parts = re.split(r"[\\/]", normalized_path)
-        category = parts[1] if len(parts) > 1 else "unknown"
+        category = parts[-2] if len(parts) >= 2 else "unknown"
         print("[DEBUG] category:", category)
-
 
         if category in categorized and len(categorized[category]) < 10:
             categorized[category].append(item)
