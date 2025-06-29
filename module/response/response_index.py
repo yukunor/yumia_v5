@@ -11,9 +11,9 @@ def is_similar_composition(current, target):
     # 感情構成比のキーが完全一致しているか
     if set(current.keys()) != set(target.keys()):
         return False
-    # 各構成比の乖離が25%以内か
+    # 各構成比の乖離が70%以内か
     for key in current:
-        if abs(current[key] - target[key]) > 25:
+        if abs(current[key] - target[key]) > 70:
             return False
     return True
 
