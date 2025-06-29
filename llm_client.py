@@ -10,29 +10,19 @@ from module.context.context_selector import select_contextual_history
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-VALID_EMOTIONS = {
-    "喜び", "期待", "怒り", "嫌悪", "悲しみ", "驚き", "恐れ", "信頼",
-    "楽観", "誇り", "病的状態", "積極性", "冷笑", "悲観", "軽蔑", "羨望",
-    "憤慨", "自責", "不信", "恥", "失望", "絶望", "感傷", "畏敬", "好奇心",
-    "歓喜", "服従", "罪悪感", "不安", "愛", "希望", "優位"
-}
-
 def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義") -> str:
     print("[DEBUG] extract_emotion_summary 呼び出し")
     print("[DEBUG] 入力 emotion_data:", emotion_data)
-    composition = emotion_data.get("構成比", {})
-
-    # 無効な感情名を除外
-    filtered = {k: v for k, v in composition.items() if k in VALID_EMOTIONS and isinstance(v, (int, float))}
+    print("[DEBUG] 入力 main_emotion:", main_emotion)
+    if not emotion_data:
+        return f"　（感情　{main_emotion}）"
+    composition = emotion_data.get("構成比")
+    print("[DEBUG] 構成比:", composition)
+    if not isinstance(composition, dict):
+        logger.warning("[WARNING] '構成比' が存在しないか辞書ではありません")
+        return f"　（感情　{main_emotion}）"
+    filtered = {k: v for k, v in composition.items() if isinstance(v, (int, float))}
     print("[DEBUG] フィルタ後の構成比:", filtered)
-
-    # 主感情補完（未定義または不正な場合）
-    if not main_emotion or main_emotion == "未定義" or main_emotion not in filtered:
-        if filtered:
-            main_emotion = max(filtered, key=filtered.get)
-        else:
-            main_emotion = "未定義"
-
     ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
     return f"　（感情　{main_emotion}: {ratio}）"
 
@@ -72,6 +62,7 @@ def generate_gpt_response_from_history(history):
 
     full_response = response.choices[0].message.content.strip()
     logger.debug(f"[DEBUG] 応答全文: {full_response[:200]}...")
+
     full_response = normalize_json_text(full_response)
 
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
@@ -151,17 +142,8 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
         composition = emotion_data.get("構成比", {})
-        # 無効な感情を除外
-        emotion_data["構成比"] = {k: v for k, v in composition.items() if k in VALID_EMOTIONS and isinstance(v, (int, float))}
-
+        print("[DEBUG] 構成比 raw:", composition)
         main_emotion = emotion_data.get("主感情", "未定義")
-        if not main_emotion or main_emotion == "未定義" or main_emotion not in emotion_data["構成比"]:
-            if emotion_data["構成比"]:
-                main_emotion = max(emotion_data["構成比"], key=emotion_data["構成比"].get)
-                emotion_data["主感情"] = main_emotion
-            else:
-                main_emotion = "未定義"
-
         emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
         print("[DEBUG] 構成比 summary:", emotion_summary)
 
@@ -172,3 +154,34 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     else:
         logger.warning("[WARNING] 感情推定にJSONが含まれていません")
         return full_response, {}
+
+def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
+    system_prompt = load_system_prompt_cached()
+    user_prompt = load_user_prompt()
+
+    reference_text = "\n\n【参考感情データ】\n"
+    for i, item in enumerate(reference_emotions, 1):
+        reference_text += f"\n● ケース{i}\n"
+        reference_text += f"主感情: {item.get('主感情')}\n"
+        reference_text += f"構成比: {item.get('構成比')}\n"
+        reference_text += f"状況: {item.get('状況')}\n"
+        reference_text += f"心理反応: {item.get('心理反応')}\n"
+        reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
+
+    prompt = f"{user_prompt}\n\nユーザー発言: {user_input}\n{reference_text}"
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000,
+            temperature=0.7,
+            top_p=1.0
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"[ERROR] 応答生成失敗: {e}")
+        return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
