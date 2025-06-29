@@ -52,30 +52,38 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         top30_emotions = search_similar_emotions(initial_emotion)
         logger.info(f"[TIMER] ▲ ステップ② 類似感情検索 完了: {time.time() - t2:.2f}秒")
 
-        logger.info(f"[検索結果] long: {len(top30_emotions.get('long', []))}件, intermediate: {len(top30_emotions.get('intermediate', []))}件, short: {len(top30_emotions.get('short', []))}件")
+        count_long = len(top30_emotions.get("long", []))
+        count_intermediate = len(top30_emotions.get("intermediate", []))
+        count_short = len(top30_emotions.get("short", []))
+        total_matches = count_long + count_intermediate + count_short
 
-        logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
-        print("🧹 ステップ③: キーワードマッチング 開始")
-        t3 = time.time()
-        long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
-        intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
-        short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
-        logger.info(f"[TIMER] ▲ ステップ③ キーワードマッチ 完了: {time.time() - t3:.2f}秒")
+        logger.info(f"[検索結果] long: {count_long}件, intermediate: {count_intermediate}件, short: {count_short}件")
 
         reference_emotions = []
 
-        if long_matches or intermediate_matches or short_matches:
-            reference_emotions = long_matches + intermediate_matches + short_matches
-            print(f"🔖 キーワードマッチによる参照件数: {len(reference_emotions)}件")
+        if total_matches == 0:
+            print("📭 構成比一致データなし → ステップ③をスキップ")
         else:
-            print("📭 キーワードマッチなし → 構成比一致データをそのまま使用します")
-            for category in ["long", "intermediate", "short"]:
-                for item in top30_emotions.get(category, []):
-                    path = item.get("保存先")
-                    date = item.get("date")
-                    target_emotion = load_emotion_by_date(path, date)
-                    if target_emotion:
-                        reference_emotions.append(target_emotion)
+            logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
+            print("🧹 ステップ③: キーワードマッチング 開始")
+            t3 = time.time()
+            long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
+            intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
+            short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
+            logger.info(f"[TIMER] ▲ ステップ③ キーワードマッチ 完了: {time.time() - t3:.2f}秒")
+
+            if long_matches or intermediate_matches or short_matches:
+                reference_emotions = long_matches + intermediate_matches + short_matches
+                print(f"🔖 キーワードマッチによる参照件数: {len(reference_emotions)}件")
+            else:
+                print("📭 キーワードマッチなし → 構成比一致データをそのまま使用します")
+                for category in ["long", "intermediate", "short"]:
+                    for item in top30_emotions.get(category, []):
+                        path = item.get("保存先")
+                        date = item.get("date")
+                        target_emotion = load_emotion_by_date(path, date)
+                        if target_emotion:
+                            reference_emotions.append(target_emotion)
 
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
