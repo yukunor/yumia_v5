@@ -5,10 +5,17 @@ def load_emotion_by_date(path: str, target_date: str) -> dict | None:
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            if "履歴" in data:
+
+            if isinstance(data, list):
+                for entry in data:
+                    if entry.get("date") == target_date:
+                        return entry
+
+            elif isinstance(data, dict) and "履歴" in data:
                 for entry in data["履歴"]:
                     if entry.get("date") == target_date:
                         return entry
+
     except Exception as e:
         logger.warning(f"[WARN] データ取得失敗: {path} ({e})")
     return None
@@ -47,4 +54,3 @@ def match_short_keywords(now_emotion: dict, index_data: list) -> list:
 
     results.sort(key=lambda x: x["match_score"])
     return results[:3]
-
