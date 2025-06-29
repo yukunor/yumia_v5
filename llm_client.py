@@ -171,6 +171,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     full_response = response.choices[0].message.content.strip()
     print("[DEBUG] 推定応答内容:", full_response)
     full_response = normalize_json_text(full_response)
+
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
 
     if json_match:
@@ -178,6 +179,13 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         print("[DEBUG] パース後 emotion_data:", emotion_data)
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # ⬇️ 追加処理：自然文から構成比を抽出し、上書き
+        text_composition = parse_emotion_summary_from_text(full_response)
+        if text_composition:
+            emotion_data["構成比"] = text_composition
+            emotion_data = normalize_emotion_data(emotion_data)
+
     else:
         composition = parse_emotion_summary_from_text(full_response)
         emotion_data = {
@@ -198,6 +206,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
     clean_text = display_text.strip()
     return f"{clean_text}\n\n{emotion_summary}", emotion_data
+
 
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     system_prompt = load_system_prompt_cached()
