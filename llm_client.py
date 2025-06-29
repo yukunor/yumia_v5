@@ -24,7 +24,14 @@ def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義")
     filtered = {k: v for k, v in composition.items() if isinstance(v, (int, float))}
     print("[DEBUG] フィルタ後の構成比:", filtered)
     ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
-    return f"　（感情　{ratio}）"
+    return f"　（感情　{main_emotion}: {ratio}）"
+
+def normalize_json_text(text):
+    text = text.replace('“', '"').replace('”', '"')
+    text = text.replace("‘", "'").replace("’", "'")
+    text = text.replace("：", ":").replace("，", ",")
+    text = text.replace("「", '"').replace("」", '"')
+    return text
 
 def generate_gpt_response_from_history(history):
     logger.info("[START] generate_gpt_response_from_history")
@@ -55,6 +62,8 @@ def generate_gpt_response_from_history(history):
 
     full_response = response.choices[0].message.content.strip()
     logger.debug(f"[DEBUG] 応答全文: {full_response[:200]}...")
+
+    full_response = normalize_json_text(full_response)
 
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
     if json_match:
@@ -123,6 +132,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
     full_response = response.choices[0].message.content.strip()
     print("[DEBUG] 推定応答内容:", full_response)
+    full_response = normalize_json_text(full_response)
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
 
     if json_match:
@@ -175,3 +185,4 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+
