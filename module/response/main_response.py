@@ -10,7 +10,7 @@ import copy
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     main_emotion = "未定義"
-    used_llm_only = False  # ← LLMのみを使ったか記録するフラグ
+    used_llm_only = False
 
     try:
         logger.info("[TIMER] ▼ ステップ① 感情推定 開始")
@@ -42,7 +42,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info(f"[検索結果] long: {len(top30_emotions.get('long', []))}件, intermediate: {len(top30_emotions.get('intermediate', []))}件, short: {len(top30_emotions.get('short', []))}件")
 
         logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
-        print("🧩 ステップ③: キーワードマッチング 開始")
+        print("🧹 ステップ③: キーワードマッチング 開始")
         t3 = time.time()
         long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
         intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
@@ -58,13 +58,13 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
             logger.info("[INFO] 類似感情がなかったため、再推定せず初期感情を使用します")
 
-            print("🧾 初期感情データ渡す直前の確認:", initial_emotion)
-            summary = extract_emotion_summary(initial_emotion)
+            print("📟 初期感情データ渡す直前の確認:", initial_emotion)
+            summary = extract_emotion_summary(initial_emotion, main_emotion)
             print("📊 初期構成比 summary 確認:", summary)
-            print(f"🧾 取得した感情データの内容: {initial_emotion}")
+            print(f"📟 取得した感情データの内容: {initial_emotion}")
             print(f"📊 構成比サマリ: {summary}")
             logger.info(f"[INFO] 出力感情構成比: {summary}")
-            used_llm_only = True  # ← LLMのみ使用と記録
+            used_llm_only = True
             return response, initial_emotion
 
     except Exception as e:
@@ -85,7 +85,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     try:
-        if not used_llm_only:  # ← LLMのみ使用した場合は感情再推定をスキップ
+        if not used_llm_only:
             logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
             print("🔁 ステップ⑤: 応答感情再推定 開始")
             t5 = time.time()
@@ -97,7 +97,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             _, response_emotion = estimate_emotion(safe_response)
             logger.debug(f"[DEBUG] 応答に対する感情推定結果: {response_emotion}")
             print("📂 保存対象の感情データ:", response_emotion)
-            summary = extract_emotion_summary(response_emotion)
+            summary = extract_emotion_summary(response_emotion, main_emotion)
             print("📊 構成比サマリ:", summary)
             logger.info(f"[INFO] 出力感情構成比: {summary}")
             logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
@@ -106,4 +106,5 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
 
-    return response, initial_emotion  # fallback
+    return response, initial_emotion
+
