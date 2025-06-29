@@ -8,14 +8,12 @@ def load_index():
         return [json.loads(line) for line in f if line.strip()]
 
 def is_similar_composition(current, target):
-    # 感情構成比のキーが完全一致しているか
-    if set(current.keys()) != set(target.keys()):
-        return False
-    # 各構成比の乖離が70%以内か
-    for key in current:
-        if abs(current[key] - target[key]) > 70:
-            return False
-    return True
+    # 0を除外して感情成分だけを取り出す
+    current_keys = {k for k, v in current.items() if v > 0}
+    target_keys = {k for k, v in target.items() if v > 0}
+
+    # 感情成分（非ゼロの感情）が完全一致しているか
+    return current_keys == target_keys
 
 def search_similar_emotions(now_emotion: dict) -> dict:
     logger.info(f"[検索] 構成比類似の候補を抽出中...")
