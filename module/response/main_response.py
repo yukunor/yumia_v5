@@ -14,10 +14,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         logger.info("[TIMER] ▼ ステップ① 感情推定 開始")
-        print("🧐 ステップ①: 感情推定 開始")
+        print("🤔 ステップ①: 感情推定 開始")
         t1 = time.time()
         _, initial_emotion = estimate_emotion(user_input)
-        print("🧐 感情推定結果:", initial_emotion)
+        print("🤔 感情推定結果:", initial_emotion)
         logger.info(f"[TIMER] ▲ ステップ① 感情推定 完了: {time.time() - t1:.2f}秒")
 
         if not isinstance(initial_emotion, dict):
@@ -42,7 +42,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info(f"[検索結果] long: {len(top30_emotions.get('long', []))}件, intermediate: {len(top30_emotions.get('intermediate', []))}件, short: {len(top30_emotions.get('short', []))}件")
 
         logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
-        print("🧩 ステップ③: キーワードマッチング 開始")
+        print("🤩 ステップ③: キーワードマッチング 開始")
         t3 = time.time()
         long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
         intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
@@ -59,7 +59,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             logger.info("[INFO] 類似感情がなかったため、再推定せず初期感情を使用します")
 
             summary = extract_emotion_summary(initial_emotion)
-            print("🧾 取得した感情データの内容:", initial_emotion)
+            print("🦾 取得した感情データの内容:", initial_emotion)
             print("📊 構成比サマリ:", summary)
             logger.info(f"[INFO] 出力感情構成比: {summary}")
             used_llm_only = True  # ← LLMのみ使用と記録
