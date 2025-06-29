@@ -75,10 +75,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print(f"🔖 マッチ件数: long={len(long_matches)}件, intermediate={len(intermediate_matches)}件, short={len(short_matches)}件")
 
             if long_matches or intermediate_matches or short_matches:
+                print("✅ キーワードマッチ成立 → そのデータを参照します")
                 reference_emotions = long_matches + intermediate_matches + short_matches
                 print(f"📚 キーワードマッチ参照データ件数: {len(reference_emotions)}件")
             else:
-                print("📭 キーワードマッチなし → 構成比一致データをそのまま使用します")
+                print("❌ キーワードマッチ不成立 → 構成比一致データを使用します")
                 for category in ["long", "intermediate", "short"]:
                     for item in top30_emotions.get(category, []):
                         path = item.get("保存先")
@@ -116,6 +117,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.debug(f"[DEBUG] GPT生成応答: {response}")
         print("📨 生成された返信:", response)
         print(f"📚 参照感情数: {len(reference_emotions)}件")
+        if reference_emotions:
+            print("📌 GPT応答で以下の感情データを参照しました:")
+            for ref in reference_emotions:
+                print(f"   - 主感情: {ref.get('主感情', '不明')}, 日付: {ref.get('date', '不明')}")
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
 
     except Exception as e:
