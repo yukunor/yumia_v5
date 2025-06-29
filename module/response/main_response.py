@@ -6,6 +6,19 @@ from response.response_short import match_short_keywords
 from utils import logger
 import time
 import copy
+import os
+import json
+
+def load_emotion_by_date(path, date):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            all_data = json.load(f)
+        for item in reversed(all_data):
+            if item.get("date") == date:
+                return item
+    except Exception as e:
+        logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
+    return None
 
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
@@ -49,7 +62,20 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
         logger.info(f"[TIMER] ▲ ステップ③ キーワードマッチ 完了: {time.time() - t3:.2f}秒")
 
-        reference_emotions = long_matches + intermediate_matches + short_matches
+        reference_emotions = []
+
+        if long_matches or intermediate_matches or short_matches:
+            reference_emotions = long_matches + intermediate_matches + short_matches
+            print(f"🔖 キーワードマッチによる参照件数: {len(reference_emotions)}件")
+        else:
+            print("📭 キーワードマッチなし → 構成比一致データをそのまま使用します")
+            for category in ["long", "intermediate", "short"]:
+                for item in top30_emotions.get(category, []):
+                    path = item.get("保存先")
+                    date = item.get("date")
+                    target_emotion = load_emotion_by_date(path, date)
+                    if target_emotion:
+                        reference_emotions.append(target_emotion)
 
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
@@ -107,4 +133,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
 
     return response, initial_emotion
-
