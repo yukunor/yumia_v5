@@ -11,13 +11,18 @@ from module.context.context_selector import select_contextual_history
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義") -> str:
+    print("[DEBUG] extract_emotion_summary 呼び出し")
+    print("[DEBUG] 入力 emotion_data:", emotion_data)
+    print("[DEBUG] 入力 main_emotion:", main_emotion)
     if not emotion_data:
         return f"　（感情　{main_emotion}）"
     composition = emotion_data.get("構成比")
+    print("[DEBUG] 構成比:", composition)
     if not isinstance(composition, dict):
         logger.warning("[WARNING] '構成比' が存在しないか辞書ではありません")
         return f"　（感情　{main_emotion}）"
     filtered = {k: v for k, v in composition.items() if isinstance(v, (int, float))}
+    print("[DEBUG] フィルタ後の構成比:", filtered)
     ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
     return f"　（感情　{ratio}）"
 
@@ -117,16 +122,20 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         return "", {}
 
     full_response = response.choices[0].message.content.strip()
+    print("[DEBUG] 推定応答内容:", full_response)
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
 
     if json_match:
         emotion_data = json.loads(json_match.group(1))
+        print("[DEBUG] パース後 emotion_data:", emotion_data)
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
         composition = emotion_data.get("構成比", {})
+        print("[DEBUG] 構成比 raw:", composition)
         main_emotion = emotion_data.get("主感情", "未定義")
         emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
+        print("[DEBUG] 構成比 summary:", emotion_summary)
 
         display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
         display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
@@ -166,3 +175,4 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+
