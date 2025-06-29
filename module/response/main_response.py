@@ -75,27 +75,31 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             logger.info(f"[TIMER] ▲ ステップ③ キーワードマッチ 完了: {time.time() - t3:.2f}秒")
 
             print(f"🔖 マッチ件数: long={len(long_matches)}件, intermediate={len(intermediate_matches)}件, short={len(short_matches)}件")
+            print("✅ キーワードマッチ成立 → 一致カテゴリはマッチデータを参照し、不一致カテゴリはスコア上位3件を使用")
 
-            if long_matches or intermediate_matches or short_matches:
-                print("✅ キーワードマッチ成立 → そのデータを参照します")
-                for e in long_matches + intermediate_matches + short_matches:
-                    path = e.get("保存先")
-                    date = e.get("date")
-                    full_emotion = load_emotion_by_date(path, date)
-                    if full_emotion:
-                        reference_emotions.append({"emotion": full_emotion})
-                print(f"📚 キーワードマッチ参照データ件数: {len(reference_emotions)}件")
-            else:
-                print("❌ キーワードマッチ不成立 → スコア上位3件を使用します")
-                for category in ["long", "intermediate", "short"]:
-                    top_items = top30_emotions.get(category, [])[:3]
-                    for item in top_items:
+            matched_categories = {
+                "long": long_matches,
+                "intermediate": intermediate_matches,
+                "short": short_matches
+            }
+
+            for category, matches in matched_categories.items():
+                if matches:
+                    for e in matches:
+                        path = e.get("保存先")
+                        date = e.get("date")
+                        full_emotion = load_emotion_by_date(path, date)
+                        if full_emotion:
+                            reference_emotions.append({"emotion": full_emotion})
+                else:
+                    for item in top30_emotions.get(category, [])[:3]:
                         path = item.get("保存先")
                         date = item.get("date")
-                        target_emotion = load_emotion_by_date(path, date)
-                        if target_emotion:
-                            reference_emotions.append({"emotion": target_emotion})
-                print(f"📚 スコア一致参照データ件数: {len(reference_emotions)}件")
+                        full_emotion = load_emotion_by_date(path, date)
+                        if full_emotion:
+                            reference_emotions.append({"emotion": full_emotion})
+
+            print(f"📚 合計参照データ件数: {len(reference_emotions)}件")
 
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
@@ -170,4 +174,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
 
     return response, initial_emotion
-
