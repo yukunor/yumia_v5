@@ -9,17 +9,25 @@ import copy
 import os
 import json
 
-def load_emotion_by_date(path, date):
+def load_emotion_by_date(path, target_date):
     try:
-        print(f"[DEBUG] 感情データ読み込み開始: path={path}, date={date}")
+        print(f"[DEBUG] 感情データ読み込み開始: path={path}, date={target_date}")
         with open(path, "r", encoding="utf-8") as f:
-            all_data = json.load(f)
-        for item in reversed(all_data):
-            item_date = item.get("date")
-            if item_date == date:
-                print(f"[DEBUG] 感情データ一致: date={item_date}")
-                return item
-        print(f"[WARNING] 感情データ一致なし: 指定date={date}")
+            data = json.load(f)
+
+        if isinstance(data, list):
+            for item in reversed(data):
+                if item.get("date") == target_date:
+                    print(f"[DEBUG] 感情データ一致: date={item.get('date')}")
+                    return item
+
+        elif isinstance(data, dict) and "履歴" in data:
+            for item in reversed(data["履歴"]):
+                if item.get("date") == target_date:
+                    print(f"[DEBUG] 感情データ一致: date={item.get('date')}")
+                    return item
+
+        print(f"[WARNING] 感情データ一致なし: 指定date={target_date}")
     except Exception as e:
         print(f"[ERROR] ファイル読み込み失敗: {e}")
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
@@ -32,10 +40,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         logger.info("[TIMER] ▼ ステップ① 感情推定 開始")
-        print("🧐 ステップ①: 感情推定 開始")
+        print("🙄 ステップ①: 感情推定 開始")
         t1 = time.time()
         _, initial_emotion = estimate_emotion(user_input)
-        print("🧐 感情推定結果:", initial_emotion)
+        print("🙄 感情推定結果:", initial_emotion)
         logger.info(f"[TIMER] ▲ ステップ① 感情推定 完了: {time.time() - t1:.2f}秒")
 
         if not isinstance(initial_emotion, dict):
@@ -69,7 +77,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         reference_emotions = []
 
         if total_matches == 0:
-            print("📭 構成比一致データなし → ステップ③をスキップ")
+            print("📬 構成比一致データなし → ステップ③をスキップ")
         else:
             logger.info("[TIMER] ▼ ステップ③ キーワードマッチ 開始")
             print("🧹 ステップ③: キーワードマッチング 開始")
@@ -121,7 +129,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
             used_llm_only = True
             summary = extract_emotion_summary(initial_emotion, main_emotion)
-            print("📟 初期感情データ渡す直前の確認:", initial_emotion)
+            print("📿 初期感情データ渡す直前の確認:", initial_emotion)
             print("📊 初期構成比 summary 確認:", summary)
             return response, initial_emotion
 
