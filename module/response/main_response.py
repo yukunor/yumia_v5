@@ -90,14 +90,20 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                         date = e.get("date")
                         full_emotion = load_emotion_by_date(path, date)
                         if full_emotion:
-                            reference_emotions.append({"emotion": full_emotion})
+                            reference_emotions.append({
+                                "emotion": full_emotion,
+                                "source": f"{category}-match"
+                            })
                 else:
                     for item in top30_emotions.get(category, [])[:3]:
                         path = item.get("保存先")
                         date = item.get("date")
                         full_emotion = load_emotion_by_date(path, date)
                         if full_emotion:
-                            reference_emotions.append({"emotion": full_emotion})
+                            reference_emotions.append({
+                                "emotion": full_emotion,
+                                "source": f"{category}-score"
+                            })
 
             print(f"📚 合計参照データ件数: {len(reference_emotions)}件")
 
@@ -106,15 +112,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print("📬 類似感情なし → LLM 応答を使用します")
             response = generate_gpt_response(user_input, [])
             logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
-            logger.info("[INFO] 類似感情がなかったため、再推定せず初期感情を使用します")
-
-            print("📟 初期感情データ渡す直前の確認:", initial_emotion)
-            summary = extract_emotion_summary(initial_emotion, main_emotion)
-            print("📊 初期構成比 summary 確認:", summary)
-            print(f"📟 取得した感情データの内容: {initial_emotion}")
-            print(f"📊 構成比サマリ: {summary}")
-            logger.info(f"[INFO] 出力感情構成比: {summary}")
             used_llm_only = True
+            summary = extract_emotion_summary(initial_emotion, main_emotion)
+            print("📟 初期感情データ渡す直前の確認:", initial_emotion)
+            print("📊 初期構成比 summary 確認:", summary)
             return response, initial_emotion
 
     except Exception as e:
@@ -133,6 +134,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print("📌 GPT応答で以下の感情データを参照しました:")
             for idx, emo_entry in enumerate(reference_emotions, start=1):
                 emo = emo_entry["emotion"]
+                source = emo_entry.get("source", "不明")
                 main = emo.get("主感情", "不明")
                 ratio = emo.get("構成比", {})
                 date = emo.get("date", "不明")
@@ -141,7 +143,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                 summary_parts = [f"{k}:{v}%" for k, v in ratio.items()]
                 summary_str = ", ".join(summary_parts)
                 keywords_str = ", ".join(keywords)
-                print(f"  [{idx}] 主感情: {main} | 構成比: {summary_str} | 日付: {date} | 状況: {situation} | キーワード: {keywords_str}")
+                print(f"  [{idx}] 出典: {source} | 主感情: {main} | 構成比: {summary_str} | 日付: {date} | 状況: {situation} | キーワード: {keywords_str}")
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
 
     except Exception as e:
@@ -156,17 +158,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
         print("🔁 ステップ⑤: 応答感情再推定 開始")
         t5 = time.time()
-
-        if not isinstance(response, str):
-            logger.error(f"[ERROR] 応答の型が文字列ではない: {type(response)} - {response}")
-
         safe_response = copy.deepcopy(response)
         _, response_emotion = estimate_emotion(safe_response)
-        logger.debug(f"[DEBUG] 応答に対する感情推定結果: {response_emotion}")
-        print("📂 保存対象の感情データ:", response_emotion)
         summary = extract_emotion_summary(response_emotion, main_emotion)
+        print("📂 保存対象の感情データ:", response_emotion)
         print("📊 構成比サマリ:", summary)
-        logger.info(f"[INFO] 出力感情構成比: {summary}")
         logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
         return response, response_emotion
 
