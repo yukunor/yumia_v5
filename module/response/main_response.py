@@ -123,6 +123,17 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
             print(f"📚 合計参照データ件数: {len(reference_emotions)}件")
 
+        if not reference_emotions:
+            logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
+            print("📬 類似感情なし → LLM 応答を使用します")
+            response = generate_gpt_response(user_input, [])
+            logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
+            used_llm_only = True
+            summary = extract_emotion_summary(initial_emotion, main_emotion)
+            print("📿 初期感情データ渡す直前の確認:", initial_emotion)
+            print("📊 初期構成比 summary 確認:", summary)
+            return response, initial_emotion
+
     except Exception as e:
         logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
         raise
@@ -133,21 +144,26 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         t4 = time.time()
         response = generate_gpt_response(user_input, [r["emotion"] for r in reference_emotions])
         logger.debug(f"[DEBUG] GPT生成応答: {response}")
+        print("📨 生成された返信:", response)
+        print(f"📚 参照感情数: {len(reference_emotions)}件")
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
+
+        def async_emotion_reestimate():
+            try:
+                logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定（非同期） 開始")
+                t5 = time.time()
+                safe_response = copy.deepcopy(response)
+                _, response_emotion = estimate_emotion(safe_response)
+                summary = extract_emotion_summary(response_emotion, main_emotion)
+                logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定（非同期） 完了: {time.time() - t5:.2f}秒")
+                logger.info(f"[RESULT] 応答感情再推定（非同期）結果: {response_emotion}")
+            except Exception as e:
+                logger.error(f"[ERROR] 非同期感情再推定中にエラー発生: {e}")
+
+        threading.Thread(target=async_emotion_reestimate).start()
+
+        return response, initial_emotion
+
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
-
-    def async_estimate_response_emotion():
-        try:
-            print("🔁 ステップ⑤: 応答感情再推定（非同期）開始")
-            _, response_emotion = estimate_emotion(copy.deepcopy(response))
-            summary = extract_emotion_summary(response_emotion, main_emotion)
-            print("📂 保存対象の感情データ（非同期）:", response_emotion)
-            print("📊 構成比サマリ（非同期）:", summary)
-        except Exception as e:
-            logger.error(f"[ERROR] 非同期感情再推定中にエラー発生: {e}")
-
-    threading.Thread(target=async_estimate_response_emotion, daemon=True).start()
-
-    return response, initial_emotion
