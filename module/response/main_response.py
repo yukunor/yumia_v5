@@ -93,22 +93,24 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                     for e in matches:
                         path = e.get("保存先")
                         date = e.get("date")
-                        full_emotion = load_emotion_by_date(path, date)
-                        if full_emotion:
-                            reference_emotions.append({
-                                "emotion": full_emotion,
-                                "source": f"{category}-match"
-                            })
+                        if path and date:
+                            full_emotion = load_emotion_by_date(path, date)
+                            if full_emotion:
+                                reference_emotions.append({
+                                    "emotion": full_emotion,
+                                    "source": f"{category}-match"
+                                })
                 else:
                     for item in top30_emotions.get(category, [])[:3]:
                         path = item.get("保存先")
                         date = item.get("date")
-                        full_emotion = load_emotion_by_date(path, date)
-                        if full_emotion:
-                            reference_emotions.append({
-                                "emotion": full_emotion,
-                                "source": f"{category}-score"
-                            })
+                        if path and date:
+                            full_emotion = load_emotion_by_date(path, date)
+                            if full_emotion:
+                                reference_emotions.append({
+                                    "emotion": full_emotion,
+                                    "source": f"{category}-score"
+                                })
 
             print(f"📚 合計参照データ件数: {len(reference_emotions)}件")
 
