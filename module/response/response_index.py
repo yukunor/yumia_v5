@@ -51,7 +51,6 @@ def search_similar_emotions(now_emotion: dict) -> dict:
 
         match_count += 1
 
-        # スラッシュ・バックスラッシュ両方に対応して分割
         normalized_path = os.path.normpath(item["保存先"])
         parts = re.split(r"[\\/]", normalized_path)
         category = parts[-2] if len(parts) >= 2 else "unknown"
@@ -61,8 +60,8 @@ def search_similar_emotions(now_emotion: dict) -> dict:
             categorized[category].append(item)
 
     print(f"📊 構成比一致: {match_count}件 / 不一致: {mismatch_count}件")
+    print(f"📦 カテゴリ別: short={len(categorized['short'])}件, intermediate={len(categorized['intermediate'])}件, long={len(categorized['long'])}件")
     logger.info(f"[検索結果] long: {len(categorized['long'])}件, intermediate: {len(categorized['intermediate'])}件, short: {len(categorized['short'])}件")
     logger.info(f"[DEBUG] ✅ 一致: {match_count}件 / ❌ 不一致: {mismatch_count}件")
 
     return categorized
-
