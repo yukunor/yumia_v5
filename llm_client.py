@@ -10,6 +10,22 @@ from module.context.context_selector import select_contextual_history
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+def normalize_emotion_data(emotion_data: dict) -> dict:
+    """Ensure emotion data has valid composition and correct main emotion."""
+    composition = emotion_data.get("構成比", {})
+    filtered = {
+        k: v for k, v in composition.items()
+        if isinstance(v, (int, float)) and k
+    }
+    if filtered:
+        main = max(filtered, key=filtered.get)
+        emotion_data["構成比"] = filtered
+        emotion_data["主感情"] = main
+    else:
+        emotion_data["構成比"] = {}
+        emotion_data["主感情"] = emotion_data.get("主感情", "未定義") or "未定義"
+    return emotion_data
+
 def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義") -> str:
     print("[DEBUG] extract_emotion_summary 呼び出し")
     print("[DEBUG] 入力 emotion_data:", emotion_data)
@@ -37,8 +53,11 @@ def parse_emotion_summary_from_text(text: str) -> dict:
     for part in parts:
         try:
             emotion, percent = part.split(":")
+            emotion = emotion.strip()
+            if not emotion:
+                continue
             percent_value = int(percent.replace("%", "").strip())
-            result[emotion.strip()] = percent_value
+            result[emotion] = percent_value
         except Exception:
             continue
     return result
@@ -165,10 +184,12 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         emotion_data = {
             "date": datetime.now().strftime("%Y%m%d%H%M%S"),
             "構成比": composition,
-            "主感情": next(iter(composition), "未定義"),
+            "主感情": "未定義",
             "データ種別": "emotion"
         }
         logger.warning("[WARNING] 感情推定にJSONが含まれていませんが、構成比を抽出しました")
+
+        emotion_data = normalize_emotion_data(emotion_data)
 
     main_emotion = emotion_data.get("主感情", "未定義")
     emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
