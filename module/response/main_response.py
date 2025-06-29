@@ -78,7 +78,12 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
             if long_matches or intermediate_matches or short_matches:
                 print("✅ キーワードマッチ成立 → そのデータを参照します")
-                reference_emotions = [{"emotion": e} for e in long_matches + intermediate_matches + short_matches]
+                for e in long_matches + intermediate_matches + short_matches:
+                    path = e.get("保存先")
+                    date = e.get("date")
+                    full_emotion = load_emotion_by_date(path, date)
+                    if full_emotion:
+                        reference_emotions.append({"emotion": full_emotion})
                 print(f"📚 キーワードマッチ参照データ件数: {len(reference_emotions)}件")
             else:
                 print("❌ キーワードマッチ不成立 → スコア上位3件を使用します")
@@ -105,8 +110,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print(f"📟 取得した感情データの内容: {initial_emotion}")
             print(f"📊 構成比サマリ: {summary}")
             logger.info(f"[INFO] 出力感情構成比: {summary}")
-            used_llm_only = True  # 📌 フラグを立てる
-            return response, initial_emotion  # 📌 再推定スキップのため即return
+            used_llm_only = True
+            return response, initial_emotion
 
     except Exception as e:
         logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
@@ -116,7 +121,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info("[TIMER] ▼ ステップ④ GPT応答生成 開始")
         print("💬 ステップ④: GPT応答生成 開始")
         t4 = time.time()
-        reference_emotions = [e if isinstance(e, dict) and "emotion" in e else {"emotion": e} for e in reference_emotions]
         response = generate_gpt_response(user_input, [r["emotion"] for r in reference_emotions])
         logger.debug(f"[DEBUG] GPT生成応答: {response}")
         print("📨 生成された返信:", response)
@@ -142,7 +146,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         if used_llm_only:
-            logger.info("[INFO] 応答感情再推定スキップ（初期感情のみ使用）")  # 📌 無駄な推定を避ける
+            logger.info("[INFO] 応答感情再推定スキップ（初期感情のみ使用）")
             return response, initial_emotion
 
         logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
