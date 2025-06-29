@@ -48,16 +48,19 @@ def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義")
     print("[DEBUG] 入力 emotion_data:", emotion_data)
     print("[DEBUG] 入力 main_emotion:", main_emotion)
     if not emotion_data:
-        return f"　（感情　{main_emotion}）"
+        return f"（主感情: {main_emotion}）"
+    
     composition = emotion_data.get("構成比")
     print("[DEBUG] 構成比:", composition)
     if not isinstance(composition, dict):
         logger.warning("[WARNING] '構成比' が存在しないか辞書ではありません")
-        return f"　（感情　{main_emotion}）"
+        return f"（主感情: {main_emotion}）"
+
     filtered = {k: v for k, v in composition.items() if isinstance(v, (int, float))}
     print("[DEBUG] フィルタ後の構成比:", filtered)
     ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
-    return f"　（感情　{main_emotion}: {ratio}）"
+    return f"（主感情: {main_emotion}｜構成比: {ratio}）"
+
 
 def parse_emotion_summary_from_text(text: str) -> dict:
     pattern = r"（感情\s+([^\n)]+)）"
