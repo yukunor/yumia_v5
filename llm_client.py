@@ -26,6 +26,23 @@ def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義")
     ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
     return f"　（感情　{main_emotion}: {ratio}）"
 
+def parse_emotion_summary_from_text(text: str) -> dict:
+    pattern = r"（感情\s+([^\n)]+)）"
+    match = re.search(pattern, text)
+    if not match:
+        return {}
+    content = match.group(1)
+    parts = [p.strip() for p in content.split("、") if ":" in p]
+    result = {}
+    for part in parts:
+        try:
+            emotion, percent = part.split(":")
+            percent_value = int(percent.replace("%", "").strip())
+            result[emotion.strip()] = percent_value
+        except Exception:
+            continue
+    return result
+
 def normalize_json_text(text):
     print("[DEBUG] 正規化前 text:", text[:200])
     text = text.replace('“', '"').replace('”', '"')
@@ -142,20 +159,25 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         print("[DEBUG] パース後 emotion_data:", emotion_data)
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
-
-        composition = emotion_data.get("構成比", {})
-        print("[DEBUG] 構成比 raw:", composition)
-        main_emotion = emotion_data.get("主感情", "未定義")
-        emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
-        print("[DEBUG] 構成比 summary:", emotion_summary)
-
-        display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
-        display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
-        clean_text = display_text.strip()
-        return f"{clean_text}\n\n{emotion_summary}", emotion_data
     else:
-        logger.warning("[WARNING] 感情推定にJSONが含まれていません")
-        return full_response, {}
+        # JSONがない場合は自然文から構成比だけでも抽出して返す
+        composition = parse_emotion_summary_from_text(full_response)
+        emotion_data = {
+            "date": datetime.now().strftime("%Y%m%d%H%M%S"),
+            "構成比": composition,
+            "主感情": next(iter(composition), "未定義"),
+            "データ種別": "emotion"
+        }
+        logger.warning("[WARNING] 感情推定にJSONが含まれていませんが、構成比を抽出しました")
+
+    main_emotion = emotion_data.get("主感情", "未定義")
+    emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
+    print("[DEBUG] 構成比 summary:", emotion_summary)
+
+    display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
+    display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
+    clean_text = display_text.strip()
+    return f"{clean_text}\n\n{emotion_summary}", emotion_data
 
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     system_prompt = load_system_prompt_cached()
