@@ -17,15 +17,26 @@ ALLOWED_EMOTIONS = [
     "好奇心", "歓喜", "服従", "罪悪感", "不安", "愛", "希望", "優位"
 ]
 
+# emotion_map の読み込み
+emotion_map_path = os.path.join(os.path.dirname(__file__), "emotion_map.json")
+if os.path.exists(emotion_map_path):
+    with open(emotion_map_path, "r", encoding="utf-8") as f:
+        EMOTION_MAP = json.load(f)
+else:
+    EMOTION_MAP = {}
+
 def normalize_emotion_data(emotion_data: dict) -> dict:
     composition = emotion_data.get("構成比", {})
-    filtered = {
-        k: v for k, v in composition.items()
-        if isinstance(v, (int, float)) and k in ALLOWED_EMOTIONS
-    }
-    if filtered:
-        main = max(filtered, key=filtered.get)
-        emotion_data["構成比"] = filtered
+    normalized = {}
+    for k, v in composition.items():
+        if isinstance(v, (int, float)):
+            std_emotion = EMOTION_MAP.get(k, k)  # emotion_map で正規化
+            if std_emotion in ALLOWED_EMOTIONS:
+                normalized[std_emotion] = normalized.get(std_emotion, 0) + v
+
+    if normalized:
+        main = max(normalized, key=normalized.get)
+        emotion_data["構成比"] = normalized
         emotion_data["主感情"] = main
     else:
         emotion_data["構成比"] = {}
