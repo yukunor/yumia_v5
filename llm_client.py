@@ -179,7 +179,6 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
     else:
-        # JSONがない場合は自然文から構成比だけでも抽出して返す
         composition = parse_emotion_summary_from_text(full_response)
         emotion_data = {
             "date": datetime.now().strftime("%Y%m%d%H%M%S"),
