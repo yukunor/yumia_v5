@@ -47,3 +47,4 @@ def match_long_keywords(now_emotion: dict, index_data: list) -> list:
     # 差分スコアが小さい順にソート
     results.sort(key=lambda x: x["match_score"])
     return results[:3]
+
