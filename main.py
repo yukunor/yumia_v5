@@ -44,7 +44,7 @@ def chat(user_message: UserMessage):
 
         # 感情データの内容を確認
         print("🧾 取得した感情データの内容:", emotion_data)
-        print("📊 構成比サマリ:", extract_emotion_summary(emotion_data.get("構成比", {})))
+        print("📊 構成比サマリ:", extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義")))
 
         print("🧼 応答のサニタイズ 開始")
         sanitized_response = sanitize_output_for_display(response)
