@@ -105,8 +105,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print(f"📟 取得した感情データの内容: {initial_emotion}")
             print(f"📊 構成比サマリ: {summary}")
             logger.info(f"[INFO] 出力感情構成比: {summary}")
-            used_llm_only = True
-            return response, initial_emotion
+            used_llm_only = True  # 📌 フラグを立てる
+            return response, initial_emotion  # 📌 再推定スキップのため即return
 
     except Exception as e:
         logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
@@ -116,11 +116,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info("[TIMER] ▼ ステップ④ GPT応答生成 開始")
         print("💬 ステップ④: GPT応答生成 開始")
         t4 = time.time()
-        # 念のため、reference_emotions の構造を修正
-        reference_emotions = [
-            e if isinstance(e, dict) and "emotion" in e else {"emotion": e}
-            for e in reference_emotions
-        ]
+        reference_emotions = [e if isinstance(e, dict) and "emotion" in e else {"emotion": e} for e in reference_emotions]
         response = generate_gpt_response(user_input, [r["emotion"] for r in reference_emotions])
         logger.debug(f"[DEBUG] GPT生成応答: {response}")
         print("📨 生成された返信:", response)
@@ -145,25 +141,29 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     try:
-        if not used_llm_only:
-            logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
-            print("🔁 ステップ⑤: 応答感情再推定 開始")
-            t5 = time.time()
+        if used_llm_only:
+            logger.info("[INFO] 応答感情再推定スキップ（初期感情のみ使用）")  # 📌 無駄な推定を避ける
+            return response, initial_emotion
 
-            if not isinstance(response, str):
-                logger.error(f"[ERROR] 応答の型が文字列ではない: {type(response)} - {response}")
+        logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
+        print("🔁 ステップ⑤: 応答感情再推定 開始")
+        t5 = time.time()
 
-            safe_response = copy.deepcopy(response)
-            _, response_emotion = estimate_emotion(safe_response)
-            logger.debug(f"[DEBUG] 応答に対する感情推定結果: {response_emotion}")
-            print("📂 保存対象の感情データ:", response_emotion)
-            summary = extract_emotion_summary(response_emotion, main_emotion)
-            print("📊 構成比サマリ:", summary)
-            logger.info(f"[INFO] 出力感情構成比: {summary}")
-            logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
-            return response, response_emotion
+        if not isinstance(response, str):
+            logger.error(f"[ERROR] 応答の型が文字列ではない: {type(response)} - {response}")
+
+        safe_response = copy.deepcopy(response)
+        _, response_emotion = estimate_emotion(safe_response)
+        logger.debug(f"[DEBUG] 応答に対する感情推定結果: {response_emotion}")
+        print("📂 保存対象の感情データ:", response_emotion)
+        summary = extract_emotion_summary(response_emotion, main_emotion)
+        print("📊 構成比サマリ:", summary)
+        logger.info(f"[INFO] 出力感情構成比: {summary}")
+        logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
+        return response, response_emotion
 
     except Exception as e:
         logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
 
     return response, initial_emotion
+
