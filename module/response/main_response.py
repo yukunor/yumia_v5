@@ -88,7 +88,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                         date = item.get("date")
                         target_emotion = load_emotion_by_date(path, date)
                         if target_emotion:
-                            reference_emotions.append(target_emotion)
+                            reference_emotions.append({"emotion": target_emotion})
                 print(f"📚 構成比一致参照データ件数: {len(reference_emotions)}件")
 
         if not reference_emotions:
@@ -115,20 +115,23 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info("[TIMER] ▼ ステップ④ GPT応答生成 開始")
         print("💬 ステップ④: GPT応答生成 開始")
         t4 = time.time()
-        response = generate_gpt_response(user_input, reference_emotions)
+        response = generate_gpt_response(user_input, [r["emotion"] for r in reference_emotions])
         logger.debug(f"[DEBUG] GPT生成応答: {response}")
         print("📨 生成された返信:", response)
         print(f"📚 参照感情数: {len(reference_emotions)}件")
         if reference_emotions:
             print("📌 GPT応答で以下の感情データを参照しました:")
-            for idx, emo in enumerate(reference_emotions, start=1):
+            for idx, emo_entry in enumerate(reference_emotions, start=1):
+                emo = emo_entry["emotion"]
                 main = emo.get("主感情", "不明")
                 ratio = emo.get("構成比", {})
                 date = emo.get("date", "不明")
                 situation = emo.get("状況", "")
+                keywords = emo.get("keywords", [])
                 summary_parts = [f"{k}:{v}%" for k, v in ratio.items()]
                 summary_str = ", ".join(summary_parts)
-                print(f"  [{idx}] 主感情: {main} | 構成比: {summary_str} | 日付: {date} | 状況: {situation}")
+                keywords_str = ", ".join(keywords)
+                print(f"  [{idx}] 主感情: {main} | 構成比: {summary_str} | 日付: {date} | 状況: {situation} | キーワード: {keywords_str}")
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
 
     except Exception as e:
