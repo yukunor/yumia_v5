@@ -37,13 +37,13 @@ def match_intermediate_keywords(now_emotion: dict, index_data: list) -> list:
         target_keywords = set(target_emotion.get("keywords", []))
         matched_keywords = list(input_keywords & target_keywords)
 
-        results.append({
-            "emotion": target_emotion,
-            "matched_keywords": matched_keywords,
-            "match_score": diff_score,
-            "match_category": "intermediate"
-        })
+        if matched_keywords:
+            results.append({
+                "emotion": target_emotion,
+                "matched_keywords": matched_keywords,
+                "match_score": diff_score,
+                "match_category": "intermediate"
+            })
 
-    # 差分スコアが小さい順にソート
     results.sort(key=lambda x: x["match_score"])
     return results[:3]
