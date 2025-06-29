@@ -10,12 +10,18 @@ from module.context.context_selector import select_contextual_history
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+ALLOWED_EMOTIONS = [
+    "喜び", "期待", "怒り", "嫌悪", "悲しみ", "驚き", "恐れ", "信頼",
+    "楽観", "誇り", "病的状態", "積極性", "冷笑", "悲観", "軽蔑", "羨望",
+    "憤慨", "自責", "不信", "恥", "失望", "絶望", "感傷", "畏敬",
+    "好奇心", "歓喜", "服従", "罪悪感", "不安", "愛", "希望", "優位"
+]
+
 def normalize_emotion_data(emotion_data: dict) -> dict:
-    """Ensure emotion data has valid composition and correct main emotion."""
     composition = emotion_data.get("構成比", {})
     filtered = {
         k: v for k, v in composition.items()
-        if isinstance(v, (int, float)) and k
+        if isinstance(v, (int, float)) and k in ALLOWED_EMOTIONS
     }
     if filtered:
         main = max(filtered, key=filtered.get)
@@ -57,7 +63,8 @@ def parse_emotion_summary_from_text(text: str) -> dict:
             if not emotion:
                 continue
             percent_value = int(percent.replace("%", "").strip())
-            result[emotion] = percent_value
+            if emotion in ALLOWED_EMOTIONS:
+                result[emotion] = percent_value
         except Exception:
             continue
     return result
@@ -180,7 +187,6 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         if not emotion_data.get("date"):
             emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        # ⬇️ 追加処理：自然文から構成比を抽出し、上書き
         text_composition = parse_emotion_summary_from_text(full_response)
         if text_composition:
             emotion_data["構成比"] = text_composition
@@ -206,7 +212,6 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
     clean_text = display_text.strip()
     return f"{clean_text}\n\n{emotion_summary}", emotion_data
-
 
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     system_prompt = load_system_prompt_cached()
@@ -238,5 +243,3 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
-
-
