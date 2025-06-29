@@ -12,6 +12,10 @@ def is_similar_composition(current, target):
     current_keys = {k for k, v in current.items() if v > 0}
     target_keys = {k for k, v in target.items() if v > 0}
 
+    # デバッグ出力を追加
+    print("[DEBUG] current_keys:", current_keys)
+    print("[DEBUG] target_keys:", target_keys)
+
     # 感情成分（非ゼロの感情）が完全一致しているか
     return current_keys == target_keys
 
