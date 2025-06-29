@@ -7,7 +7,7 @@ def load_index():
     with open("index/emotion_index.jsonl", "r", encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
-def is_similar_composition(current, target, tolerance=0.7):
+def is_similar_composition(current, target, max_diff=70):
     current_items = {k: v for k, v in current.items() if v > 0}
     target_items = {k: v for k, v in target.items() if v > 0}
 
@@ -22,17 +22,15 @@ def is_similar_composition(current, target, tolerance=0.7):
         cur_val = current_items[key]
         tgt_val = target_items.get(key, 0)
 
-        lower = cur_val * (1 - tolerance)
-        upper = cur_val * (1 + tolerance)
+        print(f"[DEBUG] 🔍 {key}: 差 = {abs(cur_val - tgt_val)} <= {max_diff} ?")
 
-        print(f"[DEBUG] 🔍 {key}: {tgt_val} ∈ [{lower:.2f}, {upper:.2f}] ?")
-
-        if not (lower <= tgt_val <= upper):
+        if abs(cur_val - tgt_val) > max_diff:
             print(f"[DEBUG] ❌ {key} が範囲外")
             return False
 
-    print("[DEBUG] ✅ 構成比一致（±{:.0f}％範囲内）".format(tolerance * 100))
+    print(f"[DEBUG] ✅ 構成比一致（±{max_diff}ポイント以内）")
     return True
+
 
 def search_similar_emotions(now_emotion: dict) -> dict:
     logger.info(f"[検索] 構成比類似の候補を抽出中...")
