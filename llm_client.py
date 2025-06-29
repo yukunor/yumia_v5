@@ -7,6 +7,7 @@ from utils import load_system_prompt_cached, load_user_prompt, logger
 from module.memory.main_memory import handle_emotion
 from module.memory.oblivion_emotion import clean_old_emotions
 from module.context.context_selector import select_contextual_history
+import copy
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -96,10 +97,7 @@ def generate_gpt_response_from_history(history):
     else:
         logger.warning("[WARNING] 応答にJSONが含まれていません")
 
-    full_response_clean = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
-    full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
-
-    return full_response_clean.strip()
+    return full_response.strip()
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     prompt_rule = load_user_prompt()
@@ -134,11 +132,10 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         composition = emotion_data.get("構成比", {})
         print("[DEBUG] 構成比 raw:", composition)
         main_emotion = emotion_data.get("主感情", "未定義")
-        emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
+        emotion_summary = extract_emotion_summary(copy.deepcopy(emotion_data), main_emotion)
         print("[DEBUG] 構成比 summary:", emotion_summary)
 
         display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
-        display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
         clean_text = display_text.strip()
         return f"{clean_text}\n\n{emotion_summary}", emotion_data
     else:
@@ -156,7 +153,7 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
         reference_text += f"構成比: {item.get('構成比')}\n"
         reference_text += f"状況: {item.get('状況')}\n"
         reference_text += f"心理反応: {item.get('心理反応')}\n"
-        reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
+        reference_text += f"キーワード: {', '.join(item.get('keywords', [])})\n"
 
     prompt = f"{user_prompt}\n\nユーザー発言: {user_input}\n{reference_text}"
 
