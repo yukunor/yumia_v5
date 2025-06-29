@@ -70,7 +70,8 @@ def divide_and_store(emotion_data: dict) -> str:
     logger.debug(f"[DEBUG] 英語ファイル名: {english_filename}")
 
     if not english_filename:
-        raise ValueError(f"[エラー] 主感情 '{main_emotion}' に対応するファイル名が見つかりません。EMOTION_MAPを確認してください。")
+        logger.warning(f"[WARNING] 主感情 '{main_emotion}' に対応するファイル名が見つかりません。保存スキップします。")
+        return ""
 
     target_file = None
 
@@ -85,7 +86,8 @@ def divide_and_store(emotion_data: dict) -> str:
     logger.debug(f"[DEBUG] 対象ファイル: {target_file}")
 
     if not target_file:
-        raise FileNotFoundError(f"[エラー] 主感情 '{main_emotion}' に一致する保存ファイルが {base_dir} に存在しません。保存を中断します。")
+        logger.warning(f"[WARNING] 主感情 '{main_emotion}' に一致する保存ファイルが {base_dir} に存在しません。保存スキップします。")
+        return ""
 
     try:
         with open(target_file, "r", encoding="utf-8") as f:
@@ -104,6 +106,10 @@ def divide_and_store(emotion_data: dict) -> str:
     existing_data["履歴"].append(emotion_data)
 
     with open(target_file, "w", encoding="utf-8") as f:
+        json.dump(existing_data, f, ensure_ascii=False, indent=4)
+
+    logger.info(f"[INFO] 感情データを {target_file} に保存しました。")
+    return target_file
         json.dump(existing_data, f, ensure_ascii=False, indent=4)
 
     logger.info(f"[INFO] 感情データを {target_file} に保存しました。")
