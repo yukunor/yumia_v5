@@ -7,17 +7,32 @@ def load_index():
     with open("index/emotion_index.jsonl", "r", encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
-def is_similar_composition(current, target):
-    # 0を除外して感情成分だけを取り出す
-    current_keys = {k for k, v in current.items() if v > 0}
-    target_keys = {k for k, v in target.items() if v > 0}
+def is_similar_composition(current, target, tolerance=0.7):
+    current_items = {k: v for k, v in current.items() if v > 0}
+    target_items = {k: v for k, v in target.items() if v > 0}
 
-    # デバッグ出力を追加
-    print("[DEBUG] current_keys:", current_keys)
-    print("[DEBUG] target_keys:", target_keys)
+    print("[DEBUG] 比較中: current_keys =", current_items)
+    print("[DEBUG] 比較中: target_keys  =", target_items)
 
-    # 感情成分（非ゼロの感情）が完全一致しているか
-    return current_keys == target_keys
+    if set(current_items.keys()) != set(target_items.keys()):
+        print("[DEBUG] ❌ キー不一致")
+        return False
+
+    for key in current_items:
+        cur_val = current_items[key]
+        tgt_val = target_items.get(key, 0)
+
+        lower = cur_val * (1 - tolerance)
+        upper = cur_val * (1 + tolerance)
+
+        print(f"[DEBUG] 🔍 {key}: {tgt_val} ∈ [{lower:.2f}, {upper:.2f}] ?")
+
+        if not (lower <= tgt_val <= upper):
+            print(f"[DEBUG] ❌ {key} が範囲外")
+            return False
+
+    print("[DEBUG] ✅ 構成比一致（±{:.0f}％範囲内）".format(tolerance * 100))
+    return True
 
 def search_similar_emotions(now_emotion: dict) -> dict:
     logger.info(f"[検索] 構成比類似の候補を抽出中...")
