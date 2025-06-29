@@ -59,7 +59,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             logger.info("[INFO] 類似感情がなかったため、再推定せず初期感情を使用します")
 
             summary = extract_emotion_summary(initial_emotion)
-            print(summary)
+            print("🧾 取得した感情データの内容:", initial_emotion)
+            print("📊 構成比サマリ:", summary)
             logger.info(f"[INFO] 出力感情構成比: {summary}")
             used_llm_only = True  # ← LLMのみ使用と記録
             return response, initial_emotion
@@ -95,7 +96,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             logger.debug(f"[DEBUG] 応答に対する感情推定結果: {response_emotion}")
             print("📂 保存対象の感情データ:", response_emotion)
             summary = extract_emotion_summary(response_emotion)
-            print(summary)
+            print("📊 構成比サマリ:", summary)
             logger.info(f"[INFO] 出力感情構成比: {summary}")
             logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
             return response, response_emotion
