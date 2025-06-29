@@ -49,8 +49,11 @@ def match_short_keywords(now_emotion: dict, index_data: list) -> list:
                 "emotion": target_emotion,
                 "matched_keywords": matched_keywords,
                 "match_score": diff_score,
-                "match_category": "short"
+                "match_category": "short",
+                "保存先": path,
+                "date": date
             })
 
     results.sort(key=lambda x: x["match_score"])
     return results[:3]
+
