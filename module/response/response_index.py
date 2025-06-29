@@ -60,7 +60,9 @@ def search_similar_emotions(now_emotion: dict) -> dict:
         if category in categorized and len(categorized[category]) < 10:
             categorized[category].append(item)
 
+    print(f"📊 構成比一致: {match_count}件 / 不一致: {mismatch_count}件")
     logger.info(f"[検索結果] long: {len(categorized['long'])}件, intermediate: {len(categorized['intermediate'])}件, short: {len(categorized['short'])}件")
     logger.info(f"[DEBUG] ✅ 一致: {match_count}件 / ❌ 不一致: {mismatch_count}件")
 
     return categorized
+
