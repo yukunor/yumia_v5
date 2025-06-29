@@ -57,6 +57,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         count_short = len(top30_emotions.get("short", []))
         total_matches = count_long + count_intermediate + count_short
 
+        print(f"📊 構成比一致: {total_matches}件 / 不一致: {1533 - total_matches}件")
+        print(f"📦 カテゴリ別: short={count_short}件, intermediate={count_intermediate}件, long={count_long}件")
         logger.info(f"[検索結果] long: {count_long}件, intermediate: {count_intermediate}件, short: {count_short}件")
 
         reference_emotions = []
@@ -119,8 +121,14 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print(f"📚 参照感情数: {len(reference_emotions)}件")
         if reference_emotions:
             print("📌 GPT応答で以下の感情データを参照しました:")
-            for ref in reference_emotions:
-                print(f"   - 主感情: {ref.get('主感情', '不明')}, 日付: {ref.get('date', '不明')}")
+            for idx, emo in enumerate(reference_emotions, start=1):
+                main = emo.get("主感情", "不明")
+                ratio = emo.get("構成比", {})
+                date = emo.get("date", "不明")
+                situation = emo.get("状況", "")
+                summary_parts = [f"{k}:{v}%" for k, v in ratio.items()]
+                summary_str = ", ".join(summary_parts)
+                print(f"  [{idx}] 主感情: {main} | 構成比: {summary_str} | 日付: {date} | 状況: {situation}")
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
 
     except Exception as e:
