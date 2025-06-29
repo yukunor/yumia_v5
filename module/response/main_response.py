@@ -78,18 +78,19 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
             if long_matches or intermediate_matches or short_matches:
                 print("✅ キーワードマッチ成立 → そのデータを参照します")
-                reference_emotions = long_matches + intermediate_matches + short_matches
+                reference_emotions = [{"emotion": e} for e in long_matches + intermediate_matches + short_matches]
                 print(f"📚 キーワードマッチ参照データ件数: {len(reference_emotions)}件")
             else:
-                print("❌ キーワードマッチ不成立 → 構成比一致データを使用します")
+                print("❌ キーワードマッチ不成立 → スコア上位3件を使用します")
                 for category in ["long", "intermediate", "short"]:
-                    for item in top30_emotions.get(category, []):
+                    top_items = top30_emotions.get(category, [])[:3]
+                    for item in top_items:
                         path = item.get("保存先")
                         date = item.get("date")
                         target_emotion = load_emotion_by_date(path, date)
                         if target_emotion:
                             reference_emotions.append({"emotion": target_emotion})
-                print(f"📚 構成比一致参照データ件数: {len(reference_emotions)}件")
+                print(f"📚 スコア一致参照データ件数: {len(reference_emotions)}件")
 
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
