@@ -116,6 +116,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info("[TIMER] ▼ ステップ④ GPT応答生成 開始")
         print("💬 ステップ④: GPT応答生成 開始")
         t4 = time.time()
+        # 念のため、reference_emotions の構造を修正
+        reference_emotions = [
+            e if isinstance(e, dict) and "emotion" in e else {"emotion": e}
+            for e in reference_emotions
+        ]
         response = generate_gpt_response(user_input, [r["emotion"] for r in reference_emotions])
         logger.debug(f"[DEBUG] GPT生成応答: {response}")
         print("📨 生成された返信:", response)
