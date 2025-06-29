@@ -72,9 +72,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
             logger.info(f"[TIMER] ▲ ステップ③ キーワードマッチ 完了: {time.time() - t3:.2f}秒")
 
+            print(f"🔖 マッチ件数: long={len(long_matches)}件, intermediate={len(intermediate_matches)}件, short={len(short_matches)}件")
+
             if long_matches or intermediate_matches or short_matches:
                 reference_emotions = long_matches + intermediate_matches + short_matches
-                print(f"🔖 キーワードマッチによる参照件数: {len(reference_emotions)}件")
+                print(f"📚 キーワードマッチ参照データ件数: {len(reference_emotions)}件")
             else:
                 print("📭 キーワードマッチなし → 構成比一致データをそのまま使用します")
                 for category in ["long", "intermediate", "short"]:
@@ -84,6 +86,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                         target_emotion = load_emotion_by_date(path, date)
                         if target_emotion:
                             reference_emotions.append(target_emotion)
+                print(f"📚 構成比一致参照データ件数: {len(reference_emotions)}件")
 
         if not reference_emotions:
             logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
@@ -112,6 +115,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         response = generate_gpt_response(user_input, reference_emotions)
         logger.debug(f"[DEBUG] GPT生成応答: {response}")
         print("📨 生成された返信:", response)
+        print(f"📚 参照感情数: {len(reference_emotions)}件")
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
 
     except Exception as e:
