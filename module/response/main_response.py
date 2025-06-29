@@ -11,12 +11,17 @@ import json
 
 def load_emotion_by_date(path, date):
     try:
+        print(f"[DEBUG] 感情データ読み込み開始: path={path}, date={date}")
         with open(path, "r", encoding="utf-8") as f:
             all_data = json.load(f)
         for item in reversed(all_data):
-            if item.get("date") == date:
+            item_date = item.get("date")
+            if item_date == date:
+                print(f"[DEBUG] 感情データ一致: date={item_date}")
                 return item
+        print(f"[WARNING] 感情データ一致なし: 指定date={date}")
     except Exception as e:
+        print(f"[ERROR] ファイル読み込み失敗: {e}")
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
 
