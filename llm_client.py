@@ -27,10 +27,12 @@ def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義")
     return f"　（感情　{main_emotion}: {ratio}）"
 
 def normalize_json_text(text):
+    print("[DEBUG] 正規化前 text:", text[:200])
     text = text.replace('“', '"').replace('”', '"')
     text = text.replace("‘", "'").replace("’", "'")
     text = text.replace("：", ":").replace("，", ",")
     text = text.replace("「", '"').replace("」", '"')
+    print("[DEBUG] 正規化後 text:", text[:200])
     return text
 
 def generate_gpt_response_from_history(history):
@@ -61,22 +63,22 @@ def generate_gpt_response_from_history(history):
         return "申し訳ありません、ご主人。応答生成中にエラーが発生しました。"
 
     full_response = response.choices[0].message.content.strip()
-    logger.debug(f"[DEBUG] 応答全文: {full_response[:200]}...")
-
+    print("[DEBUG] Raw LLM response:", full_response[:300])
     full_response = normalize_json_text(full_response)
 
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
     if json_match:
         json_data_str = json_match.group(1)
+        print("[DEBUG] JSON抽出:", json_data_str)
         try:
             structured_data = json.loads(json_data_str)
+            print("[DEBUG] パース後 structured_data:", structured_data)
             structured_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
             if structured_data.get("データ種別") == "emotion":
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 save_dir = os.path.join(base_dir, "yumia_v5", "dialogue_structured")
                 save_path = os.path.join(save_dir, "emotion.json")
-
                 logger.debug(f"[DEBUG] 構造化データ保存先: {save_path}")
                 os.makedirs(save_dir, exist_ok=True)
 
@@ -107,7 +109,7 @@ def generate_gpt_response_from_history(history):
 
     full_response_clean = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
     full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
-
+    print("[DEBUG] 最終応答出力:", full_response_clean)
     return full_response_clean.strip()
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
@@ -185,3 +187,4 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+
