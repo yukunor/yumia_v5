@@ -49,7 +49,9 @@ def match_long_keywords(now_emotion: dict, index_data: list) -> list:
                 "emotion": target_emotion,
                 "matched_keywords": matched_keywords,
                 "match_score": diff_score,
-                "match_category": "long"
+                "match_category": "long",
+                "保存先": path,
+                "date": date
             })
 
     results.sort(key=lambda x: x["match_score"])
