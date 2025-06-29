@@ -22,6 +22,7 @@ def match_long_keywords(now_emotion: dict, index_data: list) -> list:
     results = []
 
     current_composition = now_emotion.get("構成比", {})
+    input_keywords = set(now_emotion.get("keywords", []))
 
     for item in index_data:
         path = item.get("保存先")
@@ -32,10 +33,17 @@ def match_long_keywords(now_emotion: dict, index_data: list) -> list:
 
         target_composition = target_emotion.get("構成比", {})
         diff_score = compute_composition_difference(current_composition, target_composition)
-        results.append((diff_score, target_emotion))
+
+        target_keywords = set(target_emotion.get("keywords", []))
+        matched_keywords = list(input_keywords & target_keywords)
+
+        results.append({
+            "emotion": target_emotion,
+            "matched_keywords": matched_keywords,
+            "match_score": diff_score,
+            "match_category": "long"
+        })
 
     # 差分スコアが小さい順にソート
-    results.sort(key=lambda x: x[0])
-    return [data for _, data in results[:3]]
-
-
+    results.sort(key=lambda x: x["match_score"])
+    return results[:3]
