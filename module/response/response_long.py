@@ -8,31 +8,27 @@ def load_emotion_from_path(path):
     except Exception:
         return None
 
-def keyword_match_score(target_keywords, now_keywords):
-    # 一致数をスコアとする
-    return sum(1 for word in target_keywords if word in now_keywords)
+def compute_composition_difference(comp1, comp2):
+    keys = set(k for k in comp1.keys() | comp2.keys())
+    return sum(abs(comp1.get(k, 0) - comp2.get(k, 0)) for k in keys)
 
 def match_long_keywords(now_emotion: dict, index_data: list) -> list:
-    logger.info(f"[キーワード検索] longカテゴリ: インデックス{len(index_data)}件中から一致をスコアリング中...")
-    now_keywords = now_emotion.get("keywords", []) + now_emotion.get("関連", [])
+    logger.info(f"[構成比一致度優先] longカテゴリ: {len(index_data)}件をスコアリング中...")
+    results = []
 
-    scored_data = []
+    current_composition = now_emotion.get("構成比", {})
+
     for item in index_data:
         path = item.get("保存先")
         data = load_emotion_from_path(path)
         if not data:
             continue
 
-        # 対象ファイルからキーワードを取得
-        target_keywords = data.get("keywords", []) + data.get("関連", [])
-        score = keyword_match_score(target_keywords, now_keywords)
+        target_composition = data.get("構成比", {})
+        diff_score = compute_composition_difference(current_composition, target_composition)
+        results.append((diff_score, data))
 
-        scored_data.append((score, data))
+    # 差分スコアが小さい順にソート
+    results.sort(key=lambda x: x[0])
+    return [data for _, data in results[:3]]
 
-    # スコア順にソートして上位3件を返す
-    scored_data.sort(key=lambda x: x[0], reverse=True)
-    if scored_data:
-        logger.info(f"[一致結果] 最大一致スコア: {scored_data[0][0]}")
-    else:
-        logger.info("[一致結果] 一致スコアが0のため該当なし")
-    return [data for score, data in scored_data[:3]]
