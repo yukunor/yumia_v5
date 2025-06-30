@@ -130,7 +130,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info("[TIMER] ▼ ステップ④ GPT応答生成（感情含む） 開始")
         print("💬 ステップ④: GPT応答生成 開始")
         t4 = time.time()
-        response, response_emotion = generate_emotion_from_prompt(user_input, [r["emotion"] for r in reference_emotions])
+        response, response_emotion = generate_emotion_from_prompt(user_input)
         print("📨 応答内容:", response)
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成（感情含む） 完了: {time.time() - t4:.2f}秒")
 
