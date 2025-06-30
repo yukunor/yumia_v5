@@ -54,7 +54,10 @@ def chat(user_message: UserMessage):
         # 最終応答文＋構成比を再掲
         print("💬 最終応答内容（再掲）:")
         print(f"💭{sanitized_response}")
-        print(f"💞構成比（主感情: {emotion_data.get('主感情', '未定義')}）: {summary}")
+        summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
+        cleaned = summary.replace(f"（主感情: {emotion_data.get('主感情')}｜構成比: ", "").rstrip("）")
+        print(f"💞構成比（主感情: {emotion_data.get('主感情')}）: {cleaned}")
+
 
         append_history("system", sanitized_response)
         print("📝 応答履歴追加完了")
