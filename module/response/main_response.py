@@ -70,9 +70,12 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                     date = e.get("date")
                     full_emotion = load_emotion_by_date(path, date) if path and date else None
                     if full_emotion:
+                        keywords = e.get("keywords", [])
+                        match_info = f"キーワード「{keywords[0]}」" if keywords else "キーワード一致"
                         reference_emotions.append({
                             "emotion": full_emotion,
-                            "source": f"{category}-match"
+                            "source": f"{category}-match",
+                            "match_info": match_info
                         })
             else:
                 for item in top30_emotions.get(category, [])[:3]:
@@ -80,9 +83,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                     date = item.get("date")
                     full_emotion = load_emotion_by_date(path, date) if path and date else None
                     if full_emotion:
+                        main_emotion = initial_emotion.get("主感情", "主感情未定義")
                         reference_emotions.append({
                             "emotion": full_emotion,
-                            "source": f"{category}-score"
+                            "source": f"{category}-score",
+                            "match_info": f"主感情「{main_emotion}」に類似"
                         })
 
         total_reference = len(reference_emotions)
@@ -111,9 +116,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             emo = emo_entry["emotion"]
             ratio = emo.get("構成比", {})
             summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
-            print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}")
+            match_info = emo_entry.get("match_info", "")
+            print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}）")
 
         return final_response, response_emotion
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
