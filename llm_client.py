@@ -188,19 +188,16 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
     emotion_data = normalize_emotion_data(emotion_data)
 
-    # 主感情が未定義・空・存在しない場合で構成比があるとき、自動補完
-    if ("主感情" not in emotion_data or not emotion_data["主感情"] or emotion_data["主感情"] == "未定義") and "構成比" in emotion_data:
+    # 主感情が未定義で構成比がある場合、自動設定
+    if emotion_data.get("主感情", "未定義") == "未定義" and "構成比" in emotion_data:
         try:
             emotion_data["主感情"] = max(emotion_data["構成比"].items(), key=lambda x: x[1])[0]
         except Exception:
             emotion_data["主感情"] = "未定義"
 
-    main_emotion = emotion_data.get("主感情", "未定義")
-    emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
-
     clean_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
 
-    return f"{clean_text}\n\n{emotion_summary}", emotion_data
+    return clean_text, emotion_data
 
 
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
