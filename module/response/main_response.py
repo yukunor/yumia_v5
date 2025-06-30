@@ -1,4 +1,4 @@
-from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_gpt_response, extract_emotion_summary
+from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_emotion_from_prompt, extract_emotion_summary
 from response.response_index import search_similar_emotions
 from response.response_long import match_long_keywords
 from response.response_intermediate import match_intermediate_keywords
@@ -122,68 +122,36 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
             print(f"📚 合計参照データ件数: {len(reference_emotions)}件")
 
-        if not reference_emotions:
-            logger.info("[INFO] 類似感情が見つからなかったため、LLM応答を使用します")
-            print("📬 類似感情なし → LLM 応答を使用します")
-            response = generate_gpt_response(user_input, [])
-            logger.debug(f"[DEBUG] GPT生成応答（類似なし）: {response}")
-            used_llm_only = True
-            summary = extract_emotion_summary(initial_emotion, main_emotion)
-            print("📿 初期感情データ渡す直前の確認:", initial_emotion)
-            print("📊 初期構成比 summary 確認:", summary)
-            return response, initial_emotion
-
     except Exception as e:
         logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
         raise
 
     try:
-        logger.info("[TIMER] ▼ ステップ④ GPT応答生成 開始")
+        logger.info("[TIMER] ▼ ステップ④ GPT応答生成（感情含む） 開始")
         print("💬 ステップ④: GPT応答生成 開始")
         t4 = time.time()
-        response = generate_gpt_response(user_input, [r["emotion"] for r in reference_emotions])
-        logger.debug(f"[DEBUG] GPT生成応答: {response}")
-        print("📨 生成された返信:", response)
-        print(f"📚 参照感情数: {len(reference_emotions)}件")
-        logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成 完了: {time.time() - t4:.2f}秒")
+        response, response_emotion = generate_emotion_from_prompt(user_input, [r["emotion"] for r in reference_emotions])
+        print("📨 応答内容:", response)
+        logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成（感情含む） 完了: {time.time() - t4:.2f}秒")
 
-        if reference_emotions:
-            print("📌 GPT応答で以下の感情データを参照しました:")
-            for idx, emo_entry in enumerate(reference_emotions, start=1):
-                emo = emo_entry["emotion"]
-                source = emo_entry.get("source", "不明")
-                main = emo.get("主感情", "不明")
-                ratio = emo.get("構成比", {})
-                date = emo.get("date", "不明")
-                situation = emo.get("状況", "")
-                keywords = emo.get("keywords", [])
-                summary_parts = [f"{k}:{v}%" for k, v in ratio.items()]
-                summary_str = ", ".join(summary_parts)
-                keywords_str = ", ".join(keywords)
-                print(f"  [{idx}] 出典: {source} | 主感情: {main} | 構成比: {summary_str} | 日付: {date} | 状況: {situation} | キーワード: {keywords_str}")
-                logger.info(f"[参照{idx}] 出典: {source}, 主感情: {main}, 構成比: {summary_str}, 日付: {date}, 状況: {situation}, キーワード: {keywords_str}")
+        print("📌 参照感情データ:")
+        for idx, emo_entry in enumerate(reference_emotions, start=1):
+            emo = emo_entry["emotion"]
+            source = emo_entry.get("source", "不明")
+            main = emo.get("主感情", "不明")
+            ratio = emo.get("構成比", {})
+            date = emo.get("date", "不明")
+            situation = emo.get("状況", "")
+            keywords = emo.get("keywords", [])
+            summary_parts = [f"{k}:{v}%" for k, v in ratio.items()]
+            summary_str = ", ".join(summary_parts)
+            keywords_str = ", ".join(keywords)
+            print(f"[{idx}] {main}:{summary_str} | 状況: {situation} | キーワード: {keywords_str}")
+            logger.info(f"[参照{idx}] 出典: {source}, 主感情: {main}, 構成比: {summary_str}, 日付: {date}, 状況: {situation}, キーワード: {keywords_str}")
+
+        return response, response_emotion
 
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
-
-    try:
-        if used_llm_only:
-            logger.info("[INFO] 応答感情再推定スキップ（初期感情のみ使用）")
-            return response, initial_emotion
-
-        logger.info("[TIMER] ▼ ステップ⑤ 応答に対する感情再推定 開始")
-        print("🔁 ステップ⑤: 応答感情再推定 開始")
-        t5 = time.time()
-        safe_response = copy.deepcopy(response)
-        _, response_emotion = estimate_emotion(safe_response)
-        summary = extract_emotion_summary(response_emotion, main_emotion)
-        print("📂 保存対象の感情データ:", response_emotion)
-        print("📊 構成比サマリ:", summary)
-        logger.info(f"[TIMER] ▲ ステップ⑤ 応答感情再推定 完了: {time.time() - t5:.2f}秒")
-        return response, response_emotion
-
-    except Exception as e:
-        logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
-        return response, initial_emotion
 
