@@ -205,7 +205,6 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
         if text_composition:
             emotion_data["構成比"] = text_composition
             emotion_data = normalize_emotion_data(emotion_data)
-
     else:
         composition = parse_emotion_summary_from_text(full_response)
         emotion_data = {
@@ -215,7 +214,6 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
             "データ種別": "emotion"
         }
         logger.warning("[WARNING] 感情推定にJSONが含まれていませんが、構成比を抽出しました")
-
         emotion_data = normalize_emotion_data(emotion_data)
 
     main_emotion = emotion_data.get("主感情", "未定義")
