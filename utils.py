@@ -20,9 +20,14 @@ def load_history():
     with jsonlines.open(history_file, "r") as reader:
         return list(reader)
 
-def load_user_prompt():
-    """ユーザープロンプトは毎回読み込む"""
-    with open("user_prompt.txt", "r", encoding="utf-8") as f:
+def load_emotion_prompt():
+    """感情推定用プロンプトは毎回読み込む"""
+    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def load_dialogue_prompt():
+    """応答生成用プロンプトは毎回読み込む"""
+    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
         return f.read().strip()
 
 _cached_system_prompt = None
