@@ -213,7 +213,13 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
         reference_text += f"状況: {item.get('状況')}\n"
         reference_text += f"心理反応: {item.get('心理反応')}\n"
         reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
-    prompt = f"{user_prompt}\n\nユーザー発言: {user_input}\n{reference_text}"
+    prompt = (
+        f"{user_prompt}\n\n"
+        f"ユーザー発言: {user_input}\n"
+        f"{reference_text}\n\n"
+        f"【指示】上記の感情参照データを元に、emotion_promptのルールに従って応答を生成してください。"
+        f"自然な応答 + 構成比 + JSON形式の感情構造の順で出力してください。"
+     )
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
