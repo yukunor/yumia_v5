@@ -1,4 +1,4 @@
-from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_gpt_response_and_emotion, extract_emotion_summary
+from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_gpt_response, extract_emotion_summary
 from response.response_index import search_similar_emotions
 from response.response_long import match_long_keywords
 from response.response_intermediate import match_intermediate_keywords
