@@ -102,7 +102,7 @@ def generate_gpt_response_from_history(history):
                 {"role": "user", "content": user_prompt}
             ],
             max_tokens=2000,
-            temperature=0.7,
+            temperature=0,
             top_p=1.0
         )
         logger.info("[INFO] OpenAI応答取得完了")
@@ -161,7 +161,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
                 {"role": "user", "content": prompt}
             ],
             max_tokens=1000,
-            temperature=0.7,
+            temperature=0,
             top_p=1.0
         )
     except Exception as e:
@@ -222,7 +222,7 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
                 {"role": "user", "content": prompt}
             ],
             max_tokens=1000,
-            temperature=0.7,
+            temperature=0,
             top_p=1.0
         )
         return response.choices[0].message.content.strip()
