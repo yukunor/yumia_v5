@@ -32,7 +32,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ①: 感情推定 開始")
         raw_response, initial_emotion = estimate_emotion(user_input)
         print(f"💭推定応答内容（raw）: {raw_response}")
-        print(f"💞推定構成比（主感情: {initial_emotion.get('主感情', '未定義')}｜{extract_emotion_summary(initial_emotion)}）")
+        print(f"💞構成比（主感情: {initial_emotion.get('主感情', '未定義')}）: （構成比: {extract_emotion_summary(initial_emotion)}）")
     except Exception as e:
         logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
         raise
@@ -110,7 +110,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
         print("💬 最終応答内容（再掲）:")
         print(f"💭{final_response.strip()}")
-        print(f"💞構成比（主感情: {response_emotion.get('主感情', '未定義')}｜{extract_emotion_summary(response_emotion)}）")
+        print(f"💞構成比（主感情: {response_emotion.get('主感情', '未定義')}）: （構成比: {extract_emotion_summary(response_emotion)}）")
 
         print("📌 参照感情データ:")
         for idx, emo_entry in enumerate(reference_emotions, start=1):
@@ -124,4 +124,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
