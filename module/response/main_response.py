@@ -34,78 +34,42 @@ def load_emotion_by_date(path, target_date):
     return None
 
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
-    initial_emotion = {}
-    main_emotion = "未定義"
-    used_llm_only = False
-
     try:
         print("✎ステップ①: 感情推定 開始")
-        _, initial_emotion = estimate_emotion(user_input)
-        raw_response = _
+        raw_response, initial_emotion = estimate_emotion(user_input)
         print(f"💭推定応答内容（raw）: {raw_response}")
         print(f"💞推定構成比（主感情: {initial_emotion.get('主感情', '未定義')}) : {extract_emotion_summary(initial_emotion)}")
 
-    except Exception as e:
-        logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
-        raise
-
-    try:
         print("✎ステップ②: 類似感情検索 開始")
         top30_emotions = search_similar_emotions(initial_emotion)
-
-        count_long = len(top30_emotions.get("long", []))
-        count_intermediate = len(top30_emotions.get("intermediate", []))
-        count_short = len(top30_emotions.get("short", []))
-        total_matches = count_long + count_intermediate + count_short
-
+        counts = {k: len(v) for k, v in top30_emotions.items()}
+        total_matches = sum(counts.values())
         print(f"構成比一致: {total_matches}件 / 不一致: {1533 - total_matches}件")
-        print(f"カテゴリ別: short={count_short}件, intermediate={count_intermediate}件, long={count_long}件")
-
-        reference_emotions = []
+        print(f"カテゴリ別: short={counts.get('short', 0)}件, intermediate={counts.get('intermediate', 0)}件, long={counts.get('long', 0)}件")
 
         print("✎ステップ③: キーワードマッチング 開始")
-        long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
-        intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
-        short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
-
-        print(f"マッチ件数: long={len(long_matches)}件, intermediate={len(intermediate_matches)}件, short={len(short_matches)}件")
+        matched_categories = {
+            "long": match_long_keywords(initial_emotion, top30_emotions.get("long", [])),
+            "intermediate": match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", [])),
+            "short": match_short_keywords(initial_emotion, top30_emotions.get("short", []))
+        }
+        print(f"マッチ件数: long={len(matched_categories['long'])}件, intermediate={len(matched_categories['intermediate'])}件, short={len(matched_categories['short'])}件")
         print("参照データ: 3件（スコア上位）")
 
-        matched_categories = {
-            "long": long_matches,
-            "intermediate": intermediate_matches,
-            "short": short_matches
-        }
-
+        reference_emotions = []
         for category, matches in matched_categories.items():
-            if matches:
-                for e in matches:
-                    path = e.get("保存先")
-                    date = e.get("date")
-                    if path and date:
-                        full_emotion = load_emotion_by_date(path, date)
-                        if full_emotion:
-                            reference_emotions.append({
-                                "emotion": full_emotion,
-                                "source": f"{category}-match"
-                            })
-            else:
-                for item in top30_emotions.get(category, [])[:3]:
-                    path = item.get("保存先")
-                    date = item.get("date")
-                    if path and date:
-                        full_emotion = load_emotion_by_date(path, date)
-                        if full_emotion:
-                            reference_emotions.append({
-                                "emotion": full_emotion,
-                                "source": f"{category}-score"
-                            })
+            selected = matches if matches else top30_emotions.get(category, [])[:3]
+            for item in selected:
+                path = item.get("保存先")
+                date = item.get("date")
+                if path and date:
+                    full_emotion = load_emotion_by_date(path, date)
+                    if full_emotion:
+                        reference_emotions.append({
+                            "emotion": full_emotion,
+                            "source": f"{category}-match" if matches else f"{category}-score"
+                        })
 
-    except Exception as e:
-        logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
-        raise
-
-    try:
         print("✎ステップ④: 応答生成と感情再推定 開始")
         response, response_emotion = generate_emotion_from_prompt(user_input)
         print(f"💭最終応答文: {response}")
@@ -114,20 +78,16 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("📌 参照感情データ:")
         for idx, emo_entry in enumerate(reference_emotions, start=1):
             emo = emo_entry["emotion"]
-            main = emo.get("主感情", "不明")
             ratio = emo.get("構成比", {})
             situation = emo.get("状況", "")
             keywords = emo.get("keywords", [])
-            summary_parts = [f"{k}:{v}%" for k, v in ratio.items()]
-            summary_str = ", ".join(summary_parts)
-            keywords_str = ", ".join(keywords)
-            print(f"  [{idx}] {summary_str} | 状況: {situation} | キーワード: {keywords_str}")
+            summary_str = ", ".join(f"{k}:{v}%" for k, v in ratio.items())
+            print(f"  [{idx}] {summary_str} | 状況: {situation} | キーワード: {', '.join(keywords)}")
 
         print("✎ステップ⑤: 応答のサニタイズ 完了")
-
         return response, response_emotion
 
     except Exception as e:
-        logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
+        logger.error(f"[ERROR] run_response_pipeline中にエラー発生: {e}")
         raise
 
