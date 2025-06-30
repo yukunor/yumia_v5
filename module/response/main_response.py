@@ -56,7 +56,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
         short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
         print(f"マッチ件数: long={len(long_matches)}件, intermediate={len(intermediate_matches)}件, short={len(short_matches)}件")
-        print("参照データ: 3件（スコア上位）")
 
         matched_categories = {
             "long": long_matches,
@@ -85,6 +84,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                             "emotion": full_emotion,
                             "source": f"{category}-score"
                         })
+
+        match_count = sum(1 for e in reference_emotions[:3] if e["source"].endswith("-match"))
+        score_count = sum(1 for e in reference_emotions[:3] if e["source"].endswith("-score"))
+        print(f"参照データ: {match_count + score_count}件（マッチ: {match_count}件, スコア補完: {score_count}件）")
     except Exception as e:
         logger.error(f"[ERROR] キーワードマッチ中にエラー発生: {e}")
         raise
