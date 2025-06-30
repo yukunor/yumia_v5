@@ -185,9 +185,5 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     except Exception as e:
         logger.error(f"[ERROR] 応答感情再推定中にエラー発生: {e}")
+        return response, initial_emotion
 
-    return response, initial_emotion
-
-    except Exception as e:
-        logger.error(f"[ERROR] GPT応答生成または感情再推定中にエラー発生: {e}")
-        return "", initial_emotion
