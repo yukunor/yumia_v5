@@ -170,59 +170,62 @@ def generate_gpt_response_from_history(history):
     return full_response_clean.strip()
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
-    prompt_rule = load_user_prompt()
-    full_prompt = f"{prompt_rule}\nユーザー発言: {user_input}"
+    system_prompt = load_system_prompt_cached()
+    user_prompt = load_user_prompt()
+    prompt = f"{user_prompt}\nユーザー発言: {user_input}"
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": load_system_prompt_cached()},
-                {"role": "user", "content": full_prompt}
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
             ],
             max_tokens=1000,
             temperature=0.7,
             top_p=1.0
         )
-        logger.info("[INFO] 感情推定完了")
     except Exception as e:
-        logger.error(f"[ERROR] 感情推定失敗: {e}")
-        return "", {}
+        logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
+        return "申し訳ありません、ご主人。応答生成に失敗しました。", {}
 
     full_response = response.choices[0].message.content.strip()
-    print("[DEBUG] 推定応答内容:", full_response)
+    print("[DEBUG] 推定応答内容（raw）:", full_response)
     full_response = normalize_json_text(full_response)
 
+    # JSON部分抽出
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
-
     if json_match:
-        emotion_data = json.loads(json_match.group(1))
-        print("[DEBUG] パース後 emotion_data:", emotion_data)
-        if not emotion_data.get("date"):
-            emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
-
-        text_composition = parse_emotion_summary_from_text(full_response)
-        if text_composition:
-            emotion_data["構成比"] = text_composition
-            emotion_data = normalize_emotion_data(emotion_data)
+        try:
+            emotion_data = json.loads(json_match.group(1))
+            print("[DEBUG] JSON パース結果:", emotion_data)
+        except Exception as e:
+            logger.error(f"[ERROR] JSONパース失敗: {e}")
+            emotion_data = {}
     else:
-        composition = parse_emotion_summary_from_text(full_response)
-        emotion_data = {
-            "date": datetime.now().strftime("%Y%m%d%H%M%S"),
-            "構成比": composition,
-            "主感情": "未定義",
-            "データ種別": "emotion"
-        }
-        logger.warning("[WARNING] 感情推定にJSONが含まれていませんが、構成比を抽出しました")
-        emotion_data = normalize_emotion_data(emotion_data)
+        emotion_data = {}
 
+    # 構成比抽出（バックアップ用）
+    composition = parse_emotion_summary_from_text(full_response)
+    if composition:
+        emotion_data["構成比"] = composition
+
+    if not emotion_data.get("date"):
+        emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
+    if "データ種別" not in emotion_data:
+        emotion_data["データ種別"] = "emotion"
+
+    # 感情の正規化と主感情の再設定
+    emotion_data = normalize_emotion_data(emotion_data)
+
+    # 感情サマリ作成
     main_emotion = emotion_data.get("主感情", "未定義")
     emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
     print("[DEBUG] 構成比 summary:", emotion_summary)
 
-    display_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL)
-    display_text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", display_text, flags=re.DOTALL)
-    clean_text = display_text.strip()
+    # 応答本文（JSON以外の部分）抽出
+    clean_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
+
     return f"{clean_text}\n\n{emotion_summary}", emotion_data
 
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
