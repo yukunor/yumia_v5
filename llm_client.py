@@ -148,6 +148,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_user_prompt()
     prompt = f"{user_prompt}\nユーザー発言: {user_input}"
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -162,8 +163,10 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
         return "申し訳ありません、ご主人。応答生成に失敗しました。", {}
+
     full_response = response.choices[0].message.content.strip()
     full_response = normalize_json_text(full_response)
+
     json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
     if json_match:
         try:
@@ -173,17 +176,30 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
             emotion_data = {}
     else:
         emotion_data = {}
+
     composition = parse_emotion_summary_from_text(full_response)
     if composition:
         emotion_data["構成比"] = composition
+
     if not emotion_data.get("date"):
         emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
     if "データ種別" not in emotion_data:
         emotion_data["データ種別"] = "emotion"
+
     emotion_data = normalize_emotion_data(emotion_data)
+
+    # 主感情が未定義で構成比がある場合、自動設定
+    if emotion_data.get("主感情", "未定義") == "未定義" and "構成比" in emotion_data:
+        try:
+            emotion_data["主感情"] = max(emotion_data["構成比"].items(), key=lambda x: x[1])[0]
+        except Exception:
+            emotion_data["主感情"] = "未定義"
+
     main_emotion = emotion_data.get("主感情", "未定義")
     emotion_summary = extract_emotion_summary(emotion_data, main_emotion)
+
     clean_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
+
     return f"{clean_text}\n\n{emotion_summary}", emotion_data
 
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
