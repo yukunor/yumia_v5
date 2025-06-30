@@ -85,9 +85,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                             "source": f"{category}-score"
                         })
 
-        match_count = sum(1 for e in reference_emotions[:3] if e["source"].endswith("-match"))
-        score_count = sum(1 for e in reference_emotions[:3] if e["source"].endswith("-score"))
-        print(f"参照データ: {match_count + score_count}件（マッチ: {match_count}件, スコア補完: {score_count}件）")
+        total_reference = len(reference_emotions)
+        match_count = sum(1 for e in reference_emotions if e["source"].endswith("-match"))
+        score_count = total_reference - match_count
+        print(f"参照データ: {total_reference}件（キーワード一致: {match_count}件 → 類似構成比から補完: {score_count}件）")
     except Exception as e:
         logger.error(f"[ERROR] キーワードマッチ中にエラー発生: {e}")
         raise
@@ -106,7 +107,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print(f"💞応答構成比（主感情: {response_emotion.get('主感情', '未定義')}) : {extract_emotion_summary(response_emotion)}")
 
         print("📌 参照感情データ:")
-        for idx, emo_entry in enumerate(reference_emotions[:3], start=1):
+        for idx, emo_entry in enumerate(reference_emotions, start=1):
             emo = emo_entry["emotion"]
             ratio = emo.get("構成比", {})
             summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
@@ -116,4 +117,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
