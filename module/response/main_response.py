@@ -1,4 +1,4 @@
-from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_gpt_response, extract_emotion_summary
+from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_gpt_response_and_emotion, extract_emotion_summary
 from response.response_index import search_similar_emotions
 from response.response_long import match_long_keywords
 from response.response_intermediate import match_intermediate_keywords
@@ -130,11 +130,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.info("[TIMER] ▼ ステップ④ GPT応答生成＋感情再推定 開始")
         print("💬 ステップ④: GPT応答生成＋感情再推定 開始")
         t4 = time.time()
-        response, response_emotion = generate_gpt_response(user_input, [r["emotion"] for r in reference_emotions])
-        logger.debug(f"[DEBUG] GPT生成応答: {response}")
+        response, response_emotion = generate_gpt_response_and_emotion(user_input, [r["emotion"] for r in reference_emotions])
+        print("📨 応答内容:", response)
         summary = extract_emotion_summary(response_emotion, main_emotion)
-        print("📨 生成された返信:", response)
-        print("📊 応答構成比サマリ:", summary)
+        print("📊 応答構成比 summary 確認:", summary)
+        print(f"📚 参照感情数: {len(reference_emotions)}件")
         logger.info(f"[TIMER] ▲ ステップ④ GPT応答生成＋感情再推定 完了: {time.time() - t4:.2f}秒")
 
         if reference_emotions:
@@ -151,10 +151,9 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                 summary_str = ", ".join(summary_parts)
                 keywords_str = ", ".join(keywords)
                 print(f"  [{idx}] 出典: {source} | 主感情: {main} | 構成比: {summary_str} | 日付: {date} | 状況: {situation} | キーワード: {keywords_str}")
-                logger.info(f"[参照{idx}] 出典: {source}, 主感情: {main}, 構成比: {summary_str}, 日付: {date}, 状況: {situation}, キーワード: {keywords_str}")
 
         return response, response_emotion
 
     except Exception as e:
-        logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
+        logger.error(f"[ERROR] GPT応答生成または感情再推定中にエラー発生: {e}")
         return "", initial_emotion
