@@ -111,8 +111,9 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
         print("💬 最終応答内容（再掲）:")
         print(f"💭{final_response.strip()}")
+        main_emotion = response_emotion.get('主感情', '未定義')
         final_summary = ", ".join([f"{k}:{v}%" for k, v in response_emotion.get("構成比", {}).items()])
-        print(f"💞構成比（主感情: {response_emotion.get('主感情', '未定義')}）: {final_summary}")
+        print(f"💞構成比（主感情: {main_emotion}）: {final_summary}")
 
         print("📌 参照感情データ:")
         for idx, emo_entry in enumerate(reference_emotions, start=1):
