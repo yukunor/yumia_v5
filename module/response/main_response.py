@@ -4,32 +4,23 @@ from response.response_long import match_long_keywords
 from response.response_intermediate import match_intermediate_keywords
 from response.response_short import match_short_keywords
 from utils import logger
-import time
-import copy
-import os
 import json
 
 def load_emotion_by_date(path, target_date):
     try:
-        print(f"[DEBUG] 感情データ読み込み開始: path={path}, date={target_date}")
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         if isinstance(data, list):
             for item in reversed(data):
                 if item.get("date") == target_date:
-                    print(f"[DEBUG] 感情データ一致: date={item.get('date')}")
                     return item
 
         elif isinstance(data, dict) and "履歴" in data:
             for item in reversed(data["履歴"]):
                 if item.get("date") == target_date:
-                    print(f"[DEBUG] 感情データ一致: date={item.get('date')}")
                     return item
-
-        print(f"[WARNING] 感情データ一致なし: 指定date={target_date}")
     except Exception as e:
-        print(f"[ERROR] ファイル読み込み失敗: {e}")
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
 
@@ -122,3 +113,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
