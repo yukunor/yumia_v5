@@ -3,7 +3,12 @@ import re
 import json
 import os
 from datetime import datetime
-from utils import load_system_prompt_cached, load_user_prompt, logger
+from utils import (
+    load_system_prompt_cached,
+    load_emotion_prompt,
+    load_dialogue_prompt,
+    logger
+)
 from module.memory.main_memory import handle_emotion
 from module.memory.oblivion_emotion import clean_old_emotions
 from module.context.context_selector import select_contextual_history
@@ -17,7 +22,6 @@ ALLOWED_EMOTIONS = [
     "好奇心", "歓喜", "服従", "罪悪感", "不安", "愛", "希望", "優位"
 ]
 
-# emotion_map の読み込み
 emotion_map_path = os.path.join(os.path.dirname(__file__), "emotion_map.json")
 if os.path.exists(emotion_map_path):
     with open(emotion_map_path, "r", encoding="utf-8") as f:
@@ -84,7 +88,7 @@ def normalize_json_text(text):
 def generate_gpt_response_from_history(history):
     logger.info("[START] generate_gpt_response_from_history")
     system_prompt = load_system_prompt_cached()
-    user_prompt = load_user_prompt()
+    user_prompt = load_dialogue_prompt()
     logger.info("[INFO] 文脈選別開始")
     selected_history = select_contextual_history(history)
     logger.info(f"[INFO] 文脈選別結果: {len(selected_history)} 件")
@@ -146,7 +150,7 @@ def generate_gpt_response_from_history(history):
 
 def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
     system_prompt = load_system_prompt_cached()
-    user_prompt = load_user_prompt()
+    user_prompt = load_emotion_prompt()
     prompt = f"{user_prompt}\nユーザー発言: {user_input}"
 
     try:
@@ -188,7 +192,6 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
     emotion_data = normalize_emotion_data(emotion_data)
 
-    # 主感情が未定義で構成比がある場合、自動設定
     if emotion_data.get("主感情", "未定義") == "未定義" and "構成比" in emotion_data:
         try:
             emotion_data["主感情"] = max(emotion_data["構成比"].items(), key=lambda x: x[1])[0]
@@ -199,10 +202,9 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
     return clean_text, emotion_data
 
-
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     system_prompt = load_system_prompt_cached()
-    user_prompt = load_user_prompt()
+    user_prompt = load_dialogue_prompt()
     reference_text = "\n\n【参考感情データ】\n"
     for i, item in enumerate(reference_emotions, 1):
         reference_text += f"\n● ケース{i}\n"
