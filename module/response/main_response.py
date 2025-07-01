@@ -72,7 +72,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             if not matches:
                 continue
 
-            # 最も類似度の高い1件を選ぶ
             best_match = None
             best_score = float("inf")
             for e in matches:
@@ -101,8 +100,12 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         print("✎ステップ④: 応答生成と感情再推定 開始")
-        print("※感情再推定処理ログ出力対象、出力はステップ⑤にて")
-        final_response, response_emotion = generate_emotion_from_prompt(user_input)
+        if reference_emotions:
+            final_response, response_emotion = generate_emotion_from_prompt(user_input)
+        else:
+            print("⚠ 参照データがないためLLM出力をスキップし、初期応答をそのまま使用")
+            final_response = raw_response
+            response_emotion = initial_emotion
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
@@ -127,4 +130,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
