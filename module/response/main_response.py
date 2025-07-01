@@ -3,6 +3,7 @@ from response.response_index import search_similar_emotions
 from response.response_long import match_long_keywords
 from response.response_intermediate import match_intermediate_keywords
 from response.response_short import match_short_keywords
+from index_emotion import extract_personality_tendency
 from utils import logger
 import json
 
@@ -29,6 +30,14 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     reference_emotions = []
 
     try:
+        print("✎ステップ0: 人格傾向の抽出 開始")
+        personality_profile = extract_personality_tendency()
+        print(f"📊 人格傾向: {personality_profile}")
+    except Exception as e:
+        logger.error(f"[ERROR] 人格傾向抽出中にエラー発生: {e}")
+        personality_profile = {}
+
+    try:
         print("✎ステップ①: 感情推定 開始")
         raw_response, initial_emotion = estimate_emotion(user_input)
         summary_str = ", ".join([f"{k}:{v}%" for k, v in initial_emotion.get("構成比", {}).items()])
@@ -41,12 +50,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     try:
         print("✎ステップ②: 類似感情検索 開始")
         top30_emotions = search_similar_emotions(initial_emotion)
-        count_long = len(top30_emotions.get("long", []))
-        count_intermediate = len(top30_emotions.get("intermediate", []))
-        count_short = len(top30_emotions.get("short", []))
-        total_matches = count_long + count_intermediate + count_short
-        print(f"構成比一致: {total_matches}件 / 不一致: {1533 - total_matches}件")
-        print(f"カテゴリ別: short={count_short}件, intermediate={count_intermediate}件, long={count_long}件")
     except Exception as e:
         logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
         raise
@@ -66,36 +69,32 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
         for category in ["short", "intermediate", "long"]:
             matches = matched_categories.get(category, [])
-            if matches:
-                for e in matches:
-                    path = e.get("保存先")
-                    date = e.get("date")
-                    full_emotion = load_emotion_by_date(path, date) if path and date else None
-                    if full_emotion:
-                        keywords = e.get("keywords", [])
-                        match_info = f"キーワード「{keywords[0]}」" if keywords else "キーワード一致"
-                        reference_emotions.append({
-                            "emotion": full_emotion,
-                            "source": f"{category}-match",
-                            "match_info": match_info
-                        })
-            else:
-                for item in top30_emotions.get(category, [])[:3]:
-                    path = item.get("保存先")
-                    date = item.get("date")
-                    full_emotion = load_emotion_by_date(path, date) if path and date else None
-                    if full_emotion:
-                        main_emotion = initial_emotion.get("主感情", "主感情未定義")
-                        reference_emotions.append({
-                            "emotion": full_emotion,
-                            "source": f"{category}-score",
-                            "match_info": f"主感情「{main_emotion}」に類似"
-                        })
+            if not matches:
+                continue
 
-        total_reference = len(reference_emotions)
-        match_count = sum(1 for e in reference_emotions if e["source"].endswith("-match"))
-        score_count = total_reference - match_count
-        print(f"参照データ: {total_reference}件（キーワード一致: {match_count}件 → 類似構成比から補完: {score_count}件）")
+            # 最も類似度の高い1件を選ぶ
+            best_match = None
+            best_score = float("inf")
+            for e in matches:
+                score = e.get("類似スコア", float("inf"))
+                if score < best_score:
+                    best_score = score
+                    best_match = e
+
+            if best_match:
+                path = best_match.get("保存先")
+                date = best_match.get("date")
+                full_emotion = load_emotion_by_date(path, date) if path and date else None
+                if full_emotion:
+                    keywords = best_match.get("keywords", [])
+                    match_info = f"キーワード「{keywords[0]}」" if keywords else "キーワード一致"
+                    reference_emotions.append({
+                        "emotion": full_emotion,
+                        "source": f"{category}-match",
+                        "match_info": match_info
+                    })
+
+        print(f"📌 参照データ: {len(reference_emotions)}件（最大3カテゴリ各1件まで）")
     except Exception as e:
         logger.error(f"[ERROR] キーワードマッチ中にエラー発生: {e}")
         raise
@@ -128,3 +127,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
