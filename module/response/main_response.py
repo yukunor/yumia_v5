@@ -3,7 +3,7 @@ from response.response_index import search_similar_emotions
 from response.response_long import match_long_keywords
 from response.response_intermediate import match_intermediate_keywords
 from response.response_short import match_short_keywords
-from index_emotion import extract_personality_tendency
+from module.memory.index_emotion import extract_personality_tendency
 from utils import logger
 import json
 
