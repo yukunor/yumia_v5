@@ -64,7 +64,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             "short": short_matches
         }
 
-        for category, matches in matched_categories.items():
+        for category in ["short", "intermediate", "long"]:
+            matches = matched_categories.get(category, [])
             if matches:
                 for e in matches:
                     path = e.get("保存先")
@@ -127,4 +128,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
