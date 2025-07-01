@@ -205,21 +205,33 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_dialogue_prompt()
+
+    # 感情データ構築
     reference_text = "\n\n【参考感情データ】\n"
+    last_main = "未定義"
+    last_ratio = {}
+
     for i, item in enumerate(reference_emotions, 1):
+        main = item.get("主感情", "未定義")
+        ratio = item.get("構成比", {})
+        last_main = main
+        last_ratio = ratio
+
         reference_text += f"\n● ケース{i}\n"
-        reference_text += f"主感情: {item.get('主感情')}\n"
-        reference_text += f"構成比: {item.get('構成比')}\n"
+        reference_text += f"主感情: {main}\n"
+        reference_text += f"構成比: {ratio}\n"
         reference_text += f"状況: {item.get('状況')}\n"
         reference_text += f"心理反応: {item.get('心理反応')}\n"
         reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
+
+    # 指示は dialogue_prompt.txt に含まれているため、最後は直前バイアス用の再掲のみ
     prompt = (
         f"{user_prompt}\n\n"
         f"ユーザー発言: {user_input}\n"
         f"{reference_text}\n\n"
-        f"【指示】上記の感情参照データを元に、emotion_promptのルールに従って応答を生成してください。"
-        f"自然な応答 + 構成比 + JSON形式の感情構造の順で出力してください。"
-     )
+        f"※主感情: {last_main}｜構成比: {', '.join([f'{k}:{v}%' for k, v in last_ratio.items()])}"
+    )
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
