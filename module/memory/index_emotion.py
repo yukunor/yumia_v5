@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from collections import defaultdict
 from utils import logger  # ロガーのインポート
+from collections import Counter
 
 # === EMOTION_MAPから日本語キーを抽出 ===
 EMOTION_MAP = {
@@ -87,3 +88,29 @@ if __name__ == "__main__":
     }
 
     update_emotion_index(sample_data, "memory/emotion_20250617")
+
+def extract_personality_tendency(directory="memory/long/") -> dict:
+    """
+    長期記憶内の主感情を走査し、出現回数上位4件を人格傾向として抽出。
+
+    Returns:
+        dict: 上位4つの主感情とその出現回数。
+    """
+    emotion_counter = Counter()
+
+    for filename in os.listdir(directory):
+        if not filename.endswith(".json"):
+            continue
+        file_path = os.path.join(directory, filename)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data.get("データ種別") == "emotion":
+                    main_emotion = data.get("主感情")
+                    if main_emotion:
+                        emotion_counter[main_emotion] += 1
+        except Exception as e:
+            print(f"[ERROR] ファイル読込失敗: {filename} | {e}")
+
+    top_4 = dict(emotion_counter.most_common(4))
+    return top_4
