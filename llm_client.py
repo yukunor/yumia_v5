@@ -206,7 +206,6 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_dialogue_prompt()
 
-    # 感情データ構築
     reference_text = "\n\n【参考感情データ】\n"
     last_main = "未定義"
     last_ratio = {}
@@ -224,7 +223,6 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
         reference_text += f"心理反応: {item.get('心理反応')}\n"
         reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
 
-    # 指示は dialogue_prompt.txt に含まれているため、最後は直前バイアス用の再掲＋整合性ルール
     prompt = (
         f"{user_prompt}\n\n"
         f"ユーザー発言: {user_input}\n"
@@ -250,4 +248,3 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
-
