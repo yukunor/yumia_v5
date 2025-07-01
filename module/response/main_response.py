@@ -11,12 +11,10 @@ def load_emotion_by_date(path, target_date):
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-
         if isinstance(data, list):
             for item in reversed(data):
                 if item.get("date") == target_date:
                     return item
-
         elif isinstance(data, dict) and "履歴" in data:
             for item in reversed(data["履歴"]):
                 if item.get("date") == target_date:
@@ -48,17 +46,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     try:
-        print("✎ステップ②: 類似感情検索 開始")
-        top30_emotions = search_similar_emotions(initial_emotion)
-    except Exception as e:
-        logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
-        raise
+        print("✎ステップ②: キーワードマッチング 開始")
+        long_matches = match_long_keywords(initial_emotion)
+        intermediate_matches = match_intermediate_keywords(initial_emotion)
+        short_matches = match_short_keywords(initial_emotion)
 
-    try:
-        print("✎ステップ③: キーワードマッチング 開始")
-        long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
-        intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
-        short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
         print(f"マッチ件数: long={len(long_matches)}件, intermediate={len(intermediate_matches)}件, short={len(short_matches)}件")
 
         matched_categories = {
@@ -72,6 +64,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             if not matches:
                 continue
 
+            # 最も構成比が近い1件を選ぶ
             best_match = None
             best_score = float("inf")
             for e in matches:
@@ -99,20 +92,19 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     try:
-        print("✎ステップ④: 応答生成と感情再推定 開始")
         if reference_emotions:
+            print("✎ステップ④: 応答生成と感情再推定 開始")
             final_response, response_emotion = generate_emotion_from_prompt(user_input)
         else:
-            print("⚠ 参照データがないためLLM出力をスキップし、初期応答をそのまま使用")
+            print("✎ステップ④: キーワード一致なしのため、初期推定応答を使用")
             final_response = raw_response
             response_emotion = initial_emotion
     except Exception as e:
-        logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
+        logger.error(f"[ERROR] 応答生成中にエラー発生: {e}")
         raise
 
     try:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
-        print("💬 最終応答内容（再掲）:")
         print(f"💭{final_response.strip()}")
         main_emotion = response_emotion.get('主感情', '未定義')
         final_summary = ", ".join([f"{k}:{v}%" for k, v in response_emotion.get("構成比", {}).items()])
