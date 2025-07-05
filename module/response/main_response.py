@@ -1,10 +1,8 @@
 from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_emotion_from_prompt, extract_emotion_summary
-from response.response_index import search_similar_emotions
-from response.response_long import match_long_keywords
-from response.response_intermediate import match_intermediate_keywords
-from response.response_short import match_short_keywords
+from response.response_index import load_and_categorize_index, extract_best_reference
 from utils import logger
 import json
+
 
 def load_emotion_by_date(path, target_date):
     try:
@@ -24,6 +22,7 @@ def load_emotion_by_date(path, target_date):
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
 
+
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
@@ -39,70 +38,45 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     try:
-        print("✎ステップ②: 類似感情検索 開始")
-        top30_emotions = search_similar_emotions(initial_emotion)
-        count_long = len(top30_emotions.get("long", []))
-        count_intermediate = len(top30_emotions.get("intermediate", []))
-        count_short = len(top30_emotions.get("short", []))
-        total_matches = count_long + count_intermediate + count_short
-        print(f"構成比一致: {total_matches}件 / 不一致: {1533 - total_matches}件")
-        print(f"カテゴリ別: short={count_short}件, intermediate={count_intermediate}件, long={count_long}件")
+        print("✎ステップ②: インデックス全件読み込み 開始")
+        categorized = load_and_categorize_index()
+        count_long = len(categorized.get("long", []))
+        count_intermediate = len(categorized.get("intermediate", []))
+        count_short = len(categorized.get("short", []))
+        print(f"インデックス件数: short={count_short}件, intermediate={count_intermediate}件, long={count_long}件")
     except Exception as e:
-        logger.error(f"[ERROR] 類似感情検索中にエラー発生: {e}")
+        logger.error(f"[ERROR] インデックス読み込み中にエラー発生: {e}")
         raise
 
     try:
-        print("✎ステップ③: キーワードマッチング 開始")
-        long_matches = match_long_keywords(initial_emotion, top30_emotions.get("long", []))
-        intermediate_matches = match_intermediate_keywords(initial_emotion, top30_emotions.get("intermediate", []))
-        short_matches = match_short_keywords(initial_emotion, top30_emotions.get("short", []))
-        print(f"マッチ件数: long={len(long_matches)}件, intermediate={len(intermediate_matches)}件, short={len(short_matches)}件")
-
-        matched_categories = {
-            "long": long_matches,
-            "intermediate": intermediate_matches,
-            "short": short_matches
-        }
-
-        for category, matches in matched_categories.items():
-            if matches:
-                for e in matches:
-                    path = e.get("保存先")
-                    date = e.get("date")
-                    full_emotion = load_emotion_by_date(path, date) if path and date else None
-                    if full_emotion:
-                        keywords = e.get("keywords", [])
-                        match_info = f"キーワード「{keywords[0]}」" if keywords else "キーワード一致"
-                        reference_emotions.append({
-                            "emotion": full_emotion,
-                            "source": f"{category}-match",
-                            "match_info": match_info
-                        })
-            else:
-                for item in top30_emotions.get(category, [])[:3]:
-                    path = item.get("保存先")
-                    date = item.get("date")
-                    full_emotion = load_emotion_by_date(path, date) if path and date else None
-                    if full_emotion:
-                        main_emotion = initial_emotion.get("主感情", "主感情未定義")
-                        reference_emotions.append({
-                            "emotion": full_emotion,
-                            "source": f"{category}-score",
-                            "match_info": f"主感情「{main_emotion}」に類似"
-                        })
-
-        total_reference = len(reference_emotions)
-        match_count = sum(1 for e in reference_emotions if e["source"].endswith("-match"))
-        score_count = total_reference - match_count
-        print(f"参照データ: {total_reference}件（キーワード一致: {match_count}件 → 類似構成比から補完: {score_count}件）")
+        print("✎ステップ③: キーワード一致＆構成比類似 抽出 開始")
+        for category in ["short", "intermediate", "long"]:
+            reference = extract_best_reference(initial_emotion, categorized.get(category, []))
+            if reference:
+                path = reference.get("保存先")
+                date = reference.get("date")
+                full_emotion = load_emotion_by_date(path, date) if path and date else None
+                if full_emotion:
+                    keywords = reference.get("keywords", [])
+                    match_info = f"キーワード「{keywords[0]}」" if keywords else "キーワード一致"
+                    reference_emotions.append({
+                        "emotion": full_emotion,
+                        "source": f"{category}-match",
+                        "match_info": match_info
+                    })
+        print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
     except Exception as e:
-        logger.error(f"[ERROR] キーワードマッチ中にエラー発生: {e}")
+        logger.error(f"[ERROR] キーワード一致処理中にエラー発生: {e}")
         raise
 
     try:
-        print("✎ステップ④: 応答生成と感情再推定 開始")
-        print("※感情再推定処理ログ出力対象、出力はステップ⑤にて")
-        final_response, response_emotion = generate_emotion_from_prompt(user_input)
+        if not reference_emotions:
+            print("✎ステップ④: 一致なし → 仮応答を使用")
+            final_response = raw_response
+            response_emotion = initial_emotion
+        else:
+            print("✎ステップ④: 応答生成と感情再推定 開始")
+            final_response, response_emotion = generate_emotion_from_prompt(user_input)
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
