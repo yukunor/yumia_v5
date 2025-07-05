@@ -96,6 +96,11 @@ def extract_personality_tendency(directory="memory/long/") -> dict:
     Returns:
         dict: 上位4つの主感情とその出現回数。
     """
+    from collections import Counter
+    import os
+    import json
+    from utils import logger
+
     emotion_counter = Counter()
 
     for filename in os.listdir(directory):
@@ -105,12 +110,17 @@ def extract_personality_tendency(directory="memory/long/") -> dict:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if data.get("データ種別") == "emotion":
+                if isinstance(data, dict) and data.get("データ種別") == "emotion":
                     main_emotion = data.get("主感情")
                     if main_emotion:
                         emotion_counter[main_emotion] += 1
+                elif isinstance(data, dict) and "履歴" in data:
+                    for item in data["履歴"]:
+                        main_emotion = item.get("主感情")
+                        if main_emotion:
+                            emotion_counter[main_emotion] += 1
         except Exception as e:
-            print(f"[ERROR] ファイル読込失敗: {filename} | {e}")
+            logger.warning(f"[WARN] 人格傾向データ読み込み失敗（無視）: {file_path} | {e}")
 
     top_4 = dict(emotion_counter.most_common(4))
     return top_4
