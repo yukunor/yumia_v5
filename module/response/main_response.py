@@ -53,15 +53,16 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         for category in ["short", "intermediate", "long"]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
             if refer:
-                path = refer.get("保存先")
-                date = refer.get("date")
+                emotion_data = refer.get("emotion", {})
+                path = emotion_data.get("保存先")
+                date = emotion_data.get("date")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
                 if full_emotion:
-                    keywords = refer.get("keywords", [])
-                    match_info = f"キーワード「{keywords[0]}」" if keywords else "キーワード一致"
+                    keywords = emotion_data.get("キーワード", [])
+                    match_info = refer.get("match_info", "")
                     reference_emotions.append({
                         "emotion": full_emotion,
-                        "source": f"{category}-match",
+                        "source": refer.get("source"),
                         "match_info": match_info
                     })
         print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
@@ -76,7 +77,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             response_emotion = initial_emotion
         else:
             print("✎ステップ④: 応答生成と感情再推定 開始")
-            final_response, response_emotion = generate_emotion_from_prompt(user_input)
+            final_response, response_emotion = generate_emotion_from_prompt(user_input, [r["emotion"] for r in reference_emotions])
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
@@ -101,3 +102,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
