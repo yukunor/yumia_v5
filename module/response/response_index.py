@@ -44,6 +44,19 @@ def find_best_match_by_composition(current_composition, candidates):
 
         return matched >= required_match
 
+    valid_candidates = []
+    for candidate in candidates:
+        if is_valid_candidate(candidate["構成比"], current_composition):
+            valid_candidates.append(candidate)
+
+    if not valid_candidates:
+        return None  # ←条件を満たす候補がなければ None を返す
+
+    # 構成比スコアが最も高いものを選ぶ（スコア関数は仮想）
+    best = max(valid_candidates, key=lambda c: calculate_composition_score(current_composition, c["構成比"]))
+    return best
+
+
     scored = []
     for item in candidates:
         candidate_comp = item.get("構成比", {})
