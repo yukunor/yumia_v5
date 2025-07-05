@@ -7,49 +7,53 @@ def load_index():
     with open("index/emotion_index.jsonl", "r", encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
-def is_similar_composition(current, target, max_diff=70):
-    current_items = {k: v for k, v in current.items() if v > 0}
-    target_items = {k: v for k, v in target.items() if v > 0}
-
-    if set(current_items.keys()) != set(target_items.keys()):
-        return False
-
-    for key in current_items:
-        cur_val = current_items[key]
-        tgt_val = target_items.get(key, 0)
-        if abs(cur_val - tgt_val) > max_diff:
-            return False
-
-    return True
-
-def search_similar_emotions(now_emotion: dict) -> dict:
-    logger.info(f"[検索] 構成比類似の候補を抽出中...")
-
-    current_composition = now_emotion["構成比"]
+def load_and_categorize_index():
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
 
-    match_count = 0
-    mismatch_count = 0
-
     for item in all_index:
-        if not is_similar_composition(current_composition, item["構成比"]):
-            mismatch_count += 1
-            continue
-
-        match_count += 1
-        normalized_path = os.path.normpath(item["保存先"])
-        parts = re.split(r"[\\/]", normalized_path)
+        path = os.path.normpath(item.get("保存先", ""))
+        parts = re.split(r"[\\/]", path)
         category = parts[-2] if len(parts) >= 2 else "unknown"
 
-        if category in categorized and len(categorized[category]) < 10:
+        if category in categorized:
             categorized[category].append(item)
 
-    logger.info(f"[検索結果] long: {len(categorized['long'])}件, intermediate: {len(categorized['intermediate'])}件, short: {len(categorized['short'])}件")
-    logger.info(f"[DEBUG] ✅ 一致: {match_count}件 / ❌ 不一致: {mismatch_count}件")
-
-    # match_count などを返す場合：
-    categorized["match_count"] = match_count
-    categorized["mismatch_count"] = mismatch_count
-
     return categorized
+
+def compute_composition_difference(comp1, comp2):
+    keys = set(k for k in comp1.keys() | comp2.keys())
+    return sum(abs(comp1.get(k, 0) - comp2.get(k, 0)) for k in keys)
+
+def filter_by_keywords(index_data, input_keywords):
+    return [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
+
+def find_best_match_by_composition(current_composition, candidates):
+    scored = []
+    for item in candidates:
+        diff = compute_composition_difference(current_composition, item.get("構成比", {}))
+        scored.append((diff, item))
+
+    if not scored:
+        return None
+
+    scored.sort(key=lambda x: x[0])
+    return scored[0][1]
+
+def extract_best_reference(current_emotion, index_data, category):
+    input_keywords = current_emotion.get("keywords", [])
+    matched = filter_by_keywords(index_data, input_keywords)
+
+    if not matched:
+        print(f"🟨 {category}カテゴリ: キーワード一致なし → スキップ")
+        return None
+
+    best_match = find_best_match_by_composition(current_emotion.get("構成比", {}), matched)
+    if best_match:
+        print(f"✅ {category}カテゴリ: キーワード一致あり → 最も近い構成比の1件を採用")
+        return {
+            "emotion": best_match,
+            "source": f"{category}-match",
+            "match_info": f"キーワード一致（{', '.join(input_keywords)}）"
+        }
+    return None
