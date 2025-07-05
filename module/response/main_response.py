@@ -51,7 +51,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     try:
         print("✎ステップ③: キーワード一致＆構成比類似 抽出 開始")
         for category in ["short", "intermediate", "long"]:
-            reference = extract_best_reference(initial_emotion, categorized.get(category, []))
+            refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
             if reference:
                 path = reference.get("保存先")
                 date = reference.get("date")
