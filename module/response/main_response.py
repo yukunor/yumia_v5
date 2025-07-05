@@ -97,7 +97,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                 ratio = emo.get("構成比", {})
                 summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
                 match_info = emo_entry.get("match_info", "")
-                print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}）")
+                source = emo_entry.get("source", "不明")
+                print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}｜{source}）")
         else:
             print("📌 参照感情データ: 参照なし")
 
