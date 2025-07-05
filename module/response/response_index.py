@@ -39,7 +39,7 @@ def find_best_match_by_composition(current_composition, candidates):
 
         for key in shared_keys:
             diff = abs(base_comp.get(key, 0) - candidate_comp.get(key, 0))
-            if diff <= 70:
+            if diff <= 30:
                 matched += 1
 
         return matched >= required_match
