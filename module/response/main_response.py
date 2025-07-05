@@ -1,4 +1,4 @@
-from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_emotion_from_prompt, extract_emotion_summary
+from llm_client import generate_emotion_from_prompt, extract_emotion_summary
 from response.response_index import load_and_categorize_index, extract_best_reference
 from utils import logger
 import json
@@ -29,7 +29,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         print("✎ステップ①: 感情推定 開始")
-        raw_response, initial_emotion = estimate_emotion(user_input)
+        raw_response, initial_emotion = generate_emotion_from_prompt(user_input)
         summary_str = ", ".join([f"{k}:{v}%" for k, v in initial_emotion.get("構成比", {}).items()])
         print(f"💭推定応答内容（raw）: {raw_response}")
         print(f"💞構成比（主感情: {initial_emotion.get('主感情', '未定義')}）: （構成比: {summary_str}）")
@@ -102,4 +102,5 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
 
