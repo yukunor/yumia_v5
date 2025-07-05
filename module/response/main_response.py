@@ -31,8 +31,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ①: 感情推定 開始")
         raw_response, initial_emotion = estimate_emotion(user_input)
         summary_str = ", ".join([f"{k}:{v}%" for k, v in initial_emotion.get("構成比", {}).items()])
-        print(f"💭推定応答内容（raw）: {raw_response}")
-        print(f"💞構成比（主感情: {initial_emotion.get('主感情', '未定義')}）: （構成比: {summary_str}）")
+        print(f"💫推定応答内容（raw）: {raw_response}")
+        print(f"💞構成比（主感情: {initial_emotion.get('主感情', '未定義')}）: (構成比: {summary_str})")
     except Exception as e:
         logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
         raise
@@ -54,11 +54,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
             if refer:
                 emotion_data = refer.get("emotion", {})
-                path = emotion_data.get("保存先")
+                path = emotion_data.get("\u4fdd\u5b58\u5148")
                 date = emotion_data.get("date")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
                 if full_emotion:
-                    keywords = emotion_data.get("キーワード", [])
+                    keywords = emotion_data.get("\u30ad\u30fc\u30ef\u30fc\u30c9", [])
                     match_info = refer.get("match_info", "")
                     reference_emotions.append({
                         "emotion": full_emotion,
@@ -66,25 +66,26 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                         "match_info": match_info
                     })
         print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
-    except Exception as e:
-        logger.error(f"[ERROR] キーワード一致処理中にエラー発生: {e}")
-        raise
 
-    try:
-        if not reference_emotions:
+        # 構成比基準を満たす最適候補を検索
+        from module.index.find_match import find_best_match_by_composition
+        best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
+
+        if best_match is None:
             print("✎ステップ④: 一致なし → 仮応答を使用")
             final_response = raw_response
             response_emotion = initial_emotion
         else:
             print("✎ステップ④: 応答生成と感情再推定 開始")
-            final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, [r["emotion"] for r in reference_emotions])
+            final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, [best_match])
+
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
 
     try:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
-        print("💬 最終応答内容（再掲）:")
+        print("💬 最終応答内容（再揭）:")
         print(f"💭{final_response.strip()}")
         main_emotion = response_emotion.get('主感情', '未定義')
         final_summary = ", ".join([f"{k}:{v}%" for k, v in response_emotion.get("構成比", {}).items()])
