@@ -26,6 +26,7 @@ def load_emotion_by_date(path, target_date):
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
+    best_match = None
 
     try:
         print("✎ステップ①: 感情推定 開始")
@@ -67,7 +68,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                     })
         print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
 
-        # 構成比基準を満たす最適候補を検索
         best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
 
         if best_match is None:
@@ -90,16 +90,18 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         final_summary = ", ".join([f"{k}:{v}%" for k, v in response_emotion.get("構成比", {}).items()])
         print(f"💞構成比（主感情: {main_emotion}）: {final_summary}")
 
-        print("📌 参照感情データ:")
-        for idx, emo_entry in enumerate(reference_emotions, start=1):
-            emo = emo_entry["emotion"]
-            ratio = emo.get("構成比", {})
-            summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
-            match_info = emo_entry.get("match_info", "")
-            print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}）")
+        if best_match:
+            print("📌 参照感情データ:")
+            for idx, emo_entry in enumerate(reference_emotions, start=1):
+                emo = emo_entry["emotion"]
+                ratio = emo.get("構成比", {})
+                summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
+                match_info = emo_entry.get("match_info", "")
+                print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}）")
+        else:
+            print("📌 参照感情データ: 参照なし")
 
         return final_response, response_emotion
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
