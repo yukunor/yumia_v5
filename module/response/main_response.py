@@ -1,4 +1,4 @@
-from llm_client import generate_emotion_from_prompt as estimate_emotion, generate_emotion_from_prompt, extract_emotion_summary
+from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
 from response.response_index import load_and_categorize_index, extract_best_reference
 from utils import logger
 import json
@@ -77,7 +77,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             response_emotion = initial_emotion
         else:
             print("✎ステップ④: 応答生成と感情再推定 開始")
-            final_response, response_emotion = generate_emotion_from_prompt(user_input, [r["emotion"] for r in reference_emotions])
+            final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, [r["emotion"] for r in reference_emotions])
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise

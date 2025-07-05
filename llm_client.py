@@ -151,7 +151,7 @@ def generate_gpt_response_from_history(history):
     full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
     return full_response_clean.strip()
 
-def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
+def generate_emotion_from_prompt_simple(user_input: str) -> tuple[str, dict]:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_emotion_prompt()
     prompt = f"{user_prompt}\nユーザー発言: {user_input}"
@@ -205,12 +205,12 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
     return clean_text, emotion_data
 
-def generate_emotion_from_prompt(user_input: str, reference_emotions: list) -> tuple[str, dict]:
+def generate_emotion_from_prompt_with_context(user_input: str, reference_emotions: list) -> tuple[str, dict]:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_dialogue_prompt()
 
     # 人格傾向の取得と整形
-    personality = get_personality_tendency()
+    personality = extract_personality_tendency()
     personality_text = "\n【人格傾向】\nこのAIは以下の感情を持つ傾向があります：\n"
     if personality:
         for emotion, count in personality.items():
@@ -249,7 +249,47 @@ def generate_emotion_from_prompt(user_input: str, reference_emotions: list) -> t
             temperature=0.7,
             top_p=1.0
         )
-        return response.choices[0].message.content.strip(), {}  # 仮に感情データはまだないとする
+        
+        full_response = response.choices[0].message.content.strip()
+        full_response = normalize_json_text(full_response)
+        
+        # Parse JSON emotion data
+        json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
+        if json_match:
+            try:
+                emotion_data = json.loads(json_match.group(1))
+            except Exception as e:
+                logger.error(f"[ERROR] JSONパース失敗: {e}")
+                emotion_data = {}
+        else:
+            emotion_data = {}
+        
+        # Parse emotion composition from text
+        composition = parse_emotion_summary_from_text(full_response)
+        if composition:
+            emotion_data["構成比"] = composition
+        
+        # Add metadata
+        if not emotion_data.get("date"):
+            emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
+        if "データ種別" not in emotion_data:
+            emotion_data["データ種別"] = "emotion"
+        
+        # Normalize emotion data
+        emotion_data = normalize_emotion_data(emotion_data)
+        
+        # Set main emotion if not defined
+        if emotion_data.get("主感情", "未定義") == "未定義" and "構成比" in emotion_data:
+            try:
+                emotion_data["主感情"] = max(emotion_data["構成比"].items(), key=lambda x: x[1])[0]
+            except Exception:
+                emotion_data["主感情"] = "未定義"
+        
+        # Clean response text
+        clean_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
+        
+        return clean_text, emotion_data
+        
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。", {}
