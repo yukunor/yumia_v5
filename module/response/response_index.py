@@ -28,6 +28,20 @@ def compute_composition_difference(comp1, comp2):
 def filter_by_keywords(index_data, input_keywords):
     return [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
 
+def calculate_composition_score(base_comp: dict, target_comp: dict) -> float:
+    """
+    base_compとtarget_compの感情構成比の類似スコアを計算する。
+    各感情成分の差分の逆数を使って、全体のスコアを計算する。
+    Returns:
+        float: 類似スコア。高いほど類似。
+    """
+    score = 0.0
+    for key in base_comp:
+        if key in target_comp:
+            diff = abs(base_comp[key] - target_comp[key])
+            score += max(0, 100 - diff)  # 差分が小さいほどスコアが高くなる
+    return score
+
 def find_best_match_by_composition(current_composition, candidates):
     def is_valid_candidate(candidate_comp, base_comp):
         base_keys = set(base_comp.keys())
@@ -52,26 +66,9 @@ def find_best_match_by_composition(current_composition, candidates):
     if not valid_candidates:
         return None  # ←条件を満たす候補がなければ None を返す
 
-    # 構成比スコアが最も高いものを選ぶ（スコア関数は仮想）
     best = max(valid_candidates, key=lambda c: calculate_composition_score(current_composition, c["構成比"]))
     return best
 
-
-    scored = []
-    for item in candidates:
-        candidate_comp = item.get("構成比", {})
-        if not is_valid_candidate(candidate_comp, current_composition):
-            continue
-
-        diff = compute_composition_difference(current_composition, candidate_comp)
-        scored.append((diff, item))
-
-    if not scored:
-        return None
-
-    scored.sort(key=lambda x: x[0])
-    return scored[0][1]
-    
 def extract_best_reference(current_emotion, index_data, category):
     input_keywords = current_emotion.get("keywords", [])
     print(f"[DEBUG] [{category}] 入力キーワード: {input_keywords}")
@@ -96,19 +93,4 @@ def extract_best_reference(current_emotion, index_data, category):
 
     print(f"🟥 {category}カテゴリ: キーワード一致ありだが構成比マッチなし")
     return None
-
-def calculate_composition_score(base_comp: dict, target_comp: dict) -> float:
-    """
-    base_compとtarget_compの感情構成比の類似スコアを計算する。
-    各感情成分の差分の逆数を使って、全体のスコアを計算する。
-
-    Returns:
-        float: 類似スコア。高いほど類似。
-    """
-    score = 0.0
-    for key in base_comp:
-        if key in target_comp:
-            diff = abs(base_comp[key] - target_comp[key])
-            score += max(0, 100 - diff)  # 差分が小さいほどスコアが高くなる
-    return score
 
