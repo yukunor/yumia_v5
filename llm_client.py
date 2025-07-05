@@ -12,6 +12,7 @@ from utils import (
 from module.memory.main_memory import handle_emotion
 from module.memory.oblivion_emotion import clean_old_emotions
 from module.context.context_selector import select_contextual_history
+from module.memory.index_emotion import extract_personality_tendency
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -54,6 +55,8 @@ def extract_emotion_summary(emotion_data: dict, main_emotion: str = "未定義")
         logger.warning("[WARNING] '構成比' が存在しないか辞書ではありません")
         return f"（主感情: {main_emotion}）"
     filtered = {k: v for k, v in composition.items() if isinstance(v, (int, float))}
+    if not filtered:
+        return f"（主感情: {main_emotion}）"
     ratio = ", ".join([f"{k}:{v}%" for k, v in filtered.items()])
     return f"（主感情: {main_emotion}｜構成比: {ratio}）"
 
@@ -235,3 +238,10 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+
+def get_personality_tendency() -> dict:
+    try:
+        return extract_personality_tendency()
+    except Exception as e:
+        logger.error(f"[ERROR] 人格傾向の抽出に失敗しました: {e}")
+        return {}
