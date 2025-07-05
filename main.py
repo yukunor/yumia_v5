@@ -24,8 +24,8 @@ class UserMessage(BaseModel):
 def sanitize_output_for_display(text: str) -> str:
     # JSONコードブロックを削除
     text = re.sub(r"```json\s*\{.*?\}\s*```", "", text, flags=re.DOTALL)
-    # 誤って応答文に混入した感情構成比表示を削除
-    text = re.sub(r"（感情\s+[^\n)]+）", "", text)
+    # プレーンなJSONが末尾にあれば削除（感情構造のみ）
+    text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", text, flags=re.DOTALL)
     return text.strip()
 
 @app.post("/chat")
@@ -58,7 +58,6 @@ def chat(user_message: UserMessage):
         cleaned = summary.replace(f"（主感情: {emotion_data.get('主感情')}｜構成比: ", "").rstrip("）")
         print(f"💞構成比（主感情: {emotion_data.get('主感情')}）: {cleaned}")
 
-
         append_history("system", sanitized_response)
         print("📝 応答履歴追加完了")
 
@@ -83,6 +82,11 @@ def get_ui():
 @app.get("/history")
 def get_history():
     try:
+        return {"history": load_history()}
+    except Exception as e:
+        logger.exception("履歴取得中に例外が発生しました")
+        raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
+
         return {"history": load_history()}
     except Exception as e:
         logger.exception("履歴取得中に例外が発生しました")
