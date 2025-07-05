@@ -29,9 +29,28 @@ def filter_by_keywords(index_data, input_keywords):
     return [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
 
 def find_best_match_by_composition(current_composition, candidates):
+    def is_valid_candidate(candidate_comp, base_comp):
+        base_keys = set(base_comp.keys())
+        candidate_keys = set(candidate_comp.keys())
+        shared_keys = base_keys & candidate_keys
+
+        required_match = max(len(base_keys) - 1, 1)
+        matched = 0
+
+        for key in shared_keys:
+            diff = abs(base_comp.get(key, 0) - candidate_comp.get(key, 0))
+            if diff <= 70:
+                matched += 1
+
+        return matched >= required_match
+
     scored = []
     for item in candidates:
-        diff = compute_composition_difference(current_composition, item.get("構成比", {}))
+        candidate_comp = item.get("構成比", {})
+        if not is_valid_candidate(candidate_comp, current_composition):
+            continue
+
+        diff = compute_composition_difference(current_composition, candidate_comp)
         scored.append((diff, item))
 
     if not scored:
@@ -39,7 +58,7 @@ def find_best_match_by_composition(current_composition, candidates):
 
     scored.sort(key=lambda x: x[0])
     return scored[0][1]
-
+    
 def extract_best_reference(current_emotion, index_data, category):
     input_keywords = current_emotion.get("keywords", [])
     print(f"[DEBUG] [{category}] 入力キーワード: {input_keywords}")
