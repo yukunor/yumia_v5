@@ -42,13 +42,18 @@ def find_best_match_by_composition(current_composition, candidates):
 
 def extract_best_reference(current_emotion, index_data, category):
     input_keywords = current_emotion.get("keywords", [])
+    print(f"[DEBUG] [{category}] 入力キーワード: {input_keywords}")
+    
     matched = filter_by_keywords(index_data, input_keywords)
+    print(f"[DEBUG] [{category}] キーワード一致件数: {len(matched)}")
 
     if not matched:
         print(f"🟨 {category}カテゴリ: キーワード一致なし → スキップ")
         return None
 
     best_match = find_best_match_by_composition(current_emotion.get("構成比", {}), matched)
+    print(f"[DEBUG] [{category}] 最も近い構成比のデータ: {best_match}")
+
     if best_match:
         print(f"✅ {category}カテゴリ: キーワード一致あり → 最も近い構成比の1件を採用")
         return {
@@ -56,4 +61,6 @@ def extract_best_reference(current_emotion, index_data, category):
             "source": f"{category}-match",
             "match_info": f"キーワード一致（{', '.join(input_keywords)}）"
         }
+
+    print(f"🟥 {category}カテゴリ: キーワード一致ありだが構成比マッチなし")
     return None
