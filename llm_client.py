@@ -205,7 +205,7 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 
     return clean_text, emotion_data
 
-def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
+def generate_emotion_from_prompt(user_input: str, reference_emotions: list) -> tuple[str, dict]:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_dialogue_prompt()
 
@@ -249,7 +249,7 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
             temperature=0.7,
             top_p=1.0
         )
-        return response.choices[0].message.content.strip()
+        return response.choices[0].message.content.strip(), {}  # 仮に感情データはまだないとする
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
-        return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
+        return "申し訳ありません、ご主人。応答生成でエラーが発生しました。", {}
