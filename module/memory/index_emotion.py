@@ -92,6 +92,7 @@ if __name__ == "__main__":
 def extract_personality_tendency(directory="memory/long/") -> dict:
     """
     長期記憶内の主感情を走査し、出現回数上位4件を人格傾向として抽出。
+    結果はprintで出力される。
 
     Returns:
         dict: 上位4つの主感情とその出現回数。
@@ -121,6 +122,11 @@ def extract_personality_tendency(directory="memory/long/") -> dict:
                             emotion_counter[main_emotion] += 1
         except Exception as e:
             logger.warning(f"[WARN] 人格傾向データ読み込み失敗（無視）: {file_path} | {e}")
+
+    # 出現回数すべてをprint出力
+    print("📊 現在の人格傾向（long保存データの主感情カウント）:")
+    for emotion, count in emotion_counter.most_common():
+        print(f"  - {emotion}: {count}件")
 
     top_4 = dict(emotion_counter.most_common(4))
     return top_4
