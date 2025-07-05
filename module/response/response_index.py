@@ -96,3 +96,19 @@ def extract_best_reference(current_emotion, index_data, category):
 
     print(f"🟥 {category}カテゴリ: キーワード一致ありだが構成比マッチなし")
     return None
+
+def calculate_composition_score(base_comp: dict, target_comp: dict) -> float:
+    """
+    base_compとtarget_compの感情構成比の類似スコアを計算する。
+    各感情成分の差分の逆数を使って、全体のスコアを計算する。
+
+    Returns:
+        float: 類似スコア。高いほど類似。
+    """
+    score = 0.0
+    for key in base_comp:
+        if key in target_comp:
+            diff = abs(base_comp[key] - target_comp[key])
+            score += max(0, 100 - diff)  # 差分が小さいほどスコアが高くなる
+    return score
+
