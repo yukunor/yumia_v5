@@ -52,12 +52,12 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ③: キーワード一致＆構成比類似 抽出 開始")
         for category in ["short", "intermediate", "long"]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
-            if reference:
-                path = reference.get("保存先")
-                date = reference.get("date")
+            if refer:
+                path = refer.get("保存先")
+                date = refer.get("date")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
                 if full_emotion:
-                    keywords = reference.get("keywords", [])
+                    keywords = refer.get("keywords", [])
                     match_info = f"キーワード「{keywords[0]}」" if keywords else "キーワード一致"
                     reference_emotions.append({
                         "emotion": full_emotion,
