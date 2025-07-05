@@ -5,8 +5,11 @@ import json
 # Add module path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from llm_client import generate_emotion_from_prompt_simple as estimate_emotion,
-    generate_emotion_from_prompt_with_context, extract_emotion_summary
+from llm_client import (
+    generate_emotion_from_prompt_simple as estimate_emotion,
+    generate_emotion_from_prompt_with_context,
+    extract_emotion_summary
+)
 from module.response.response_index import load_and_categorize_index, extract_best_reference
 from utils import logger
 
