@@ -1,8 +1,7 @@
 from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
-from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition  # ← これを追加
+from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
 from utils import logger
 import json
-
 
 
 def load_emotion_by_date(path, target_date):
@@ -55,11 +54,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
             if refer:
                 emotion_data = refer.get("emotion", {})
-                path = emotion_data.get("\u4fdd\u5b58\u5148")
+                path = emotion_data.get("保存先")
                 date = emotion_data.get("date")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
                 if full_emotion:
-                    keywords = emotion_data.get("\u30ad\u30fc\u30ef\u30fc\u30c9", [])
+                    keywords = emotion_data.get("キーワード", [])
                     match_info = refer.get("match_info", "")
                     reference_emotions.append({
                         "emotion": full_emotion,
@@ -69,7 +68,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
 
         # 構成比基準を満たす最適候補を検索
-        from module.index.find_match import find_best_match_by_composition
         best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
 
         if best_match is None:
@@ -104,3 +102,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
