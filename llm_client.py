@@ -208,6 +208,17 @@ def generate_emotion_from_prompt(user_input: str) -> tuple[str, dict]:
 def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_dialogue_prompt()
+
+    # 人格傾向の取得と整形
+    personality = get_personality_tendency()
+    personality_text = "\n【人格傾向】\nこのAIは以下の感情を持つ傾向があります：\n"
+    if personality:
+        for emotion, count in personality.items():
+            personality_text += f"・{emotion}（{count}回）\n"
+    else:
+        personality_text += "傾向情報がまだ十分にありません。\n"
+
+    # 参考感情データの整形
     reference_text = "\n\n【参考感情データ】\n"
     for i, item in enumerate(reference_emotions, 1):
         reference_text += f"\n● ケース{i}\n"
@@ -216,13 +227,17 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
         reference_text += f"状況: {item.get('状況')}\n"
         reference_text += f"心理反応: {item.get('心理反応')}\n"
         reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
+
+    # プロンプト生成
     prompt = (
         f"{user_prompt}\n\n"
+        f"{personality_text}\n"
         f"ユーザー発言: {user_input}\n"
         f"{reference_text}\n\n"
-        f"【指示】上記の感情参照データを元に、emotion_promptのルールに従って応答を生成してください。"
+        f"【指示】上記の感情参照データと人格傾向を参考に、emotion_promptのルールに従って応答を生成してください。"
         f"自然な応答 + 構成比 + JSON形式の感情構造の順で出力してください。"
-     )
+    )
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -238,10 +253,3 @@ def generate_gpt_response(user_input: str, reference_emotions: list) -> str:
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "申し訳ありません、ご主人。応答生成でエラーが発生しました。"
-
-def get_personality_tendency() -> dict:
-    try:
-        return extract_personality_tendency()
-    except Exception as e:
-        logger.error(f"[ERROR] 人格傾向の抽出に失敗しました: {e}")
-        return {}
