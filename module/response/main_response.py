@@ -1,7 +1,7 @@
 from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
 from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
 from utils import logger
-from module.memory.main_memory import handle_emotion, save_emotion_sample  # 追加
+from module.memory.main_memory import handle_emotion, save_emotion_sample, append_emotion_history, pad_emotion_vector  # ✅ 追加
 import json
 
 def load_emotion_by_date(path, target_date):
@@ -109,7 +109,9 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
 
-        # ✅ 短期感情履歴として emotion_history.jsonl に記録
+        # ✅ 短期感情履歴として emotion_history.jsonl に記録（全感情で補完してから）
+        padded_ratio = pad_emotion_vector(response_emotion.get("構成比", {}))
+        response_emotion["構成比"] = padded_ratio
         append_emotion_history(response_emotion)
 
         return final_response, response_emotion
