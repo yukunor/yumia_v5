@@ -2,6 +2,7 @@ from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, 
 from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
 from utils import logger
 from module.memory.main_memory import handle_emotion, save_emotion_sample, append_emotion_history, pad_emotion_vector  # ✅ 追加
+from module.emotion_stats import synthesize_current_emotion  # ✅ 追加
 import json
 
 def load_emotion_by_date(path, target_date):
@@ -26,6 +27,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
     best_match = None
+
+    # 追加: 現在の気分を合成して取得
+    current_feeling_data = synthesize_current_emotion()
+    current_feeling = current_feeling_data.get("現在の気分", {})
+    long_base_emotion = current_feeling_data.get("主感情", "未定義")
 
     try:
         print("✎ステップ①: 感情推定 開始")
@@ -79,7 +85,21 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             response_emotion = initial_emotion
         else:
             print("✎ステップ④: 応答生成と感情再推定 開始")
-            final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, [best_match])
+
+            # 長期感情（人格基盤）と現在の気分（短期〜中期）を
+            # プロンプトに渡すため、contextに組み込み
+            context = [best_match]
+            # ここで current_feeling と long_base_emotion を含めた追加情報をcontextに挿入
+            context.append({
+                "emotion": {
+                    "人格基盤（long_base_emotion）": long_base_emotion,
+                    "現在の気分": current_feeling
+                },
+                "source": "現在の気分合成データ",
+                "match_info": "人格基盤と現在の気分のプロンプト挿入用"
+            })
+
+            final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, context)
 
     except Exception as e:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
@@ -118,3 +138,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
