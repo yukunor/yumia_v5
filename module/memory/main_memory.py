@@ -9,6 +9,7 @@ from utils import logger  # ロガーのインポート
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 INDEX_PATH = os.path.join(BASE_DIR, "index", "emotion_index.jsonl")
 DATASET_PATH = os.path.join(BASE_DIR, "dataset_emotion.jsonl")  # 追加：保存先パス
+HISTORY_PATH = os.path.join(BASE_DIR, "emotion_history.jsonl")  # 追加：履歴パス
 index_dir = os.path.dirname(INDEX_PATH)
 
 # ディレクトリ存在チェック
@@ -46,3 +47,17 @@ def save_emotion_sample(input_text, response_text, emotion_vector):
         logger.info("[INFO] dataset_emotion.jsonl に感情データを記録しました。")
     except Exception as e:
         logger.error(f"[ERROR] 感情データの記録に失敗しました: {e}")
+
+# 感情履歴保存関数（emotion_history.jsonl に保存）
+def append_emotion_history(emotion_data):
+    try:
+        record = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "主感情": emotion_data.get("主感情", ""),
+            "構成比": emotion_data.get("構成比", {})
+        }
+        with open(HISTORY_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        logger.info("[INFO] emotion_history.jsonl に履歴を追加しました。")
+    except Exception as e:
+        logger.error(f"[ERROR] 感情履歴の保存に失敗しました: {e}")
