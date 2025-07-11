@@ -1,7 +1,7 @@
 from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
 from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
 from utils import logger
-from main_memory import handle_emotion, save_emotion_sample  # 追加
+from module.memory.main_memory import handle_emotion, save_emotion_sample  # 追加
 import json
 
 def load_emotion_by_date(path, target_date):
