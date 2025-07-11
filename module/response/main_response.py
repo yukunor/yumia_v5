@@ -2,7 +2,7 @@ from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, 
 from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
 from utils import logger
 from module.memory.main_memory import handle_emotion, save_emotion_sample, append_emotion_history, pad_emotion_vector  # ✅ 追加
-from module.emotion_stats import synthesize_current_emotion  # ✅ 追加
+from module.memory.emotion_stats import synthesize_current_emotion  # ✅ 追加
 import json
 
 def load_emotion_by_date(path, target_date):
