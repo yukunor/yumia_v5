@@ -109,8 +109,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
 
+        # ✅ 短期感情履歴として emotion_history.jsonl に記録
+        append_emotion_history(response_emotion)
+
         return final_response, response_emotion
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
