@@ -31,7 +31,7 @@ def pad_emotion_vector(vector):
     return {emotion: vector.get(emotion, 0) for emotion in ALL_EMOTIONS}
 
 # 感情データ処理関数
-def handle_emotion(emotion_data):
+def handle_emotion(emotion_data, user_input=None, response_text=None):
     try:
         memory_path = divide_and_store(emotion_data)
         update_emotion_index(emotion_data, memory_path)
@@ -53,8 +53,10 @@ def save_emotion_sample(input_text, response_text, emotion_vector):
         with open(DATASET_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
         logger.info("[INFO] dataset_emotion.jsonl に感情データを記録しました。")
+        print("[✅] dataset_emotion.jsonl に感情データを記録しました。")
     except Exception as e:
         logger.error(f"[ERROR] 感情データの記録に失敗しました: {e}")
+        print(f"[❌] 感情データの記録に失敗しました: {e}")
 
 # 感情履歴保存関数
 def append_emotion_history(emotion_data):
@@ -68,5 +70,8 @@ def append_emotion_history(emotion_data):
         with open(HISTORY_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
         logger.info("[INFO] emotion_history.jsonl に履歴を追加しました。")
+        print("[✅] emotion_history.jsonl に履歴を追加しました。")
     except Exception as e:
         logger.error(f"[ERROR] 感情履歴の保存に失敗しました: {e}")
+        print(f"[❌] 感情履歴の保存に失敗しました: {e}")
+
