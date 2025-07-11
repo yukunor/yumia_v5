@@ -1,7 +1,7 @@
 from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
 from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
 from utils import logger
-from main_memory import handle_emotion  # 追加
+from main_memory import handle_emotion, save_emotion_sample  # 追加
 import json
 
 def load_emotion_by_date(path, target_date):
@@ -28,28 +28,32 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     best_match = None
 
     try:
-        print("\u270e\u30b9\u30c6\u30c3\u30d7\uff11: \u611f\u60c5\u63a8\u5b9a \u958b\u59cb")
+        print("✎ステップ①: 感情推定 開始")
         raw_response, initial_emotion = estimate_emotion(user_input)
-        summary_str = ", ".join([f"{k}:{v}%" for k, v in initial_emotion.get("\u69cb\u6210\u6bd4", {}).items()])
-        print(f"\ud83d\udcab\u63a8\u5b9a\u5fdc\u7b54\u5185\u5bb9（raw）: {raw_response}")
-        print(f"\ud83d\udc96\u69cb\u6210\u6bd4（\u4e3b\u611f\u60c5: {initial_emotion.get('主感情', '未定義')}\uff09: (\u69cb\u6210\u6bd4: {summary_str})")
+        summary_str = ", ".join([f"{k}:{v}%" for k, v in initial_emotion.get("構成比", {}).items()])
+        print(f"💫推定応答内容（raw）: {raw_response}")
+        print(f"💞構成比（主感情: {initial_emotion.get('主感情', '未定義')}）: (構成比: {summary_str})")
+
+        # ✅ GPT推定結果をデータセットに記録
+        save_emotion_sample(user_input, raw_response, initial_emotion.get("構成比", {}))
+
     except Exception as e:
         logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
         raise
 
     try:
-        print("\u270e\u30b9\u30c6\u30c3\u30d7\uff12: \u30a4\u30f3\u30c7\u30c3\u30af\u30b9\u5168\u4ef6\u8aad\u307f\u8fbc\u307f \u958b\u59cb")
+        print("✎ステップ②: インデックス全件読み込み 開始")
         categorized = load_and_categorize_index()
         count_long = len(categorized.get("long", []))
         count_intermediate = len(categorized.get("intermediate", []))
         count_short = len(categorized.get("short", []))
-        print(f"\u30a4\u30f3\u30c7\u30c3\u30af\u30b9\u4ef6\u6570: short={count_short}\u4ef6, intermediate={count_intermediate}\u4ef6, long={count_long}\u4ef6")
+        print(f"インデックス件数: short={count_short}件, intermediate={count_intermediate}件, long={count_long}件")
     except Exception as e:
         logger.error(f"[ERROR] インデックス読み込み中にエラー発生: {e}")
         raise
 
     try:
-        print("\u270e\u30b9\u30c6\u30c3\u30d7\uff13: \u30ad\u30fc\u30ef\u30fc\u30c9\u4e00\u81f4\uff06\u69cb\u6210\u6bd4\u985e\u4f3c \u62bd\u51fa \u958b\u59cb")
+        print("✎ステップ③: キーワード一致＆構成比類似 抽出 開始")
         for category in ["short", "intermediate", "long"]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
             if refer:
@@ -65,16 +69,16 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                         "source": refer.get("source"),
                         "match_info": match_info
                     })
-        print(f"\ud83d\udccc \u30ad\u30fc\u30ef\u30fc\u30c9\u4e00\u81f4\u306b\u3088\u308b\u53c2\u7167\u611f\u60c5\u4ef6\u6570: {len(reference_emotions)}\u4ef6")
+        print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
 
         best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
 
         if best_match is None:
-            print("\u270e\u30b9\u30c6\u30c3\u30d7\uff14: \u4e00\u81f4\u306a\u3057 \u2192 \u4eee\u5fdc\u7b54\u3092\u4f7f\u7528")
+            print("✎ステップ④: 一致なし → 仮応答を使用")
             final_response = raw_response
             response_emotion = initial_emotion
         else:
-            print("\u270e\u30b9\u30c6\u30c3\u30d7\uff14: \u5fdc\u7b54\u751f\u6210\u3068\u611f\u60c5\u518d\u63a8\u5b9a \u958b\u59cb")
+            print("✎ステップ④: 応答生成と感情再推定 開始")
             final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, [best_match])
 
     except Exception as e:
@@ -82,15 +86,15 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     try:
-        print("\u270e\u30b9\u30c6\u30c3\u30d7\uff15: \u5fdc\u7b54\u306e\u30b5\u30cb\u30bf\u30a4\u30ba \u5b8c\u4e86")
-        print("\ud83d\udcac \u6700\u7d42\u5fdc\u7b54\u5185\u5bb9\uff08\u518d\u63a1\uff09:")
-        print(f"\ud83d\udcad{final_response.strip()}")
+        print("✎ステップ⑤: 応答のサニタイズ 完了")
+        print("💬 最終応答内容（再掲）:")
+        print(f"💭{final_response.strip()}")
         main_emotion = response_emotion.get('主感情', '未定義')
         final_summary = ", ".join([f"{k}:{v}%" for k, v in response_emotion.get("構成比", {}).items()])
-        print(f"\ud83d\udc96\u69cb\u6210\u6bd4（\u4e3b\u611f\u60c5: {main_emotion}\uff09: {final_summary}")
+        print(f"💞構成比（主感情: {main_emotion}）: {final_summary}")
 
         if best_match:
-            print("\ud83d\udccc \u53c2\u7167\u611f\u60c5\u30c7\u30fc\u30bf:")
+            print("📌 参照感情データ:")
             for idx, emo_entry in enumerate(reference_emotions, start=1):
                 emo = emo_entry["emotion"]
                 ratio = emo.get("構成比", {})
@@ -99,10 +103,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                 source = emo_entry.get("source", "不明")
                 print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}｜{source}）")
         else:
-            print("\ud83d\udccc \u53c2\u7167\u611f\u60c5\u30c7\u30fc\u30bf: \u53c2\u7167\u306a\u3057")
+            print("📌 参照感情データ: 参照なし")
 
-        # ✅ 感情保存用に渡す（dataset_emotion用）
-        response_emotion["emotion_vector"] = response_emotion.get("構成比", {})  # 明示的に追加
+        # ✅ 感情保存用に渡す（emotion_index 用）
+        response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
 
         return final_response, response_emotion
