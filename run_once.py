@@ -1,8 +1,8 @@
 import sys
 import os
 
-# 現在のディレクトリのパス（project/src）をPythonパスに追加
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# moduleディレクトリをPythonパスに追加
+sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 
 from db.database import init_db
 
