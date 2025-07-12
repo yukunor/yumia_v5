@@ -1,8 +1,8 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from module.db.models import Base   # ← 相対でなく絶対に統一
+from module.db.models import Base  # ← 相対ではなく絶対インポート
 
+import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
