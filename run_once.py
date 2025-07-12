@@ -1,9 +1,9 @@
 import sys
 import os
 
-# moduleディレクトリをPythonパスに追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
+# 「src」の一つ上のディレクトリをPythonパスに追加
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db.database import init_db
+from module.db.database import init_db
 
 init_db()
