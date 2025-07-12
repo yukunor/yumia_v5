@@ -1,5 +1,6 @@
-from .database import SessionLocal
-from .models import Message
+from module.db.database import SessionLocal
+from module.db.models import Message
+
 
 def append_history_db(role: str, message: str):
     db = SessionLocal()
