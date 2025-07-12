@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from module.db.models import Base  # ← 相対ではなく絶対インポート
+from db.models import Base  # ← ここも絶対インポートに合わせて修正
 
 import os
 
