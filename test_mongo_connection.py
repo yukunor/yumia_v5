@@ -1,19 +1,17 @@
-import os
+from fastapi import FastAPI
 from pymongo import MongoClient
-from dotenv import load_dotenv
+import os
 
-# .env がある場合は読み込み（Render では不要）
-load_dotenv()
+app = FastAPI()
 
-# 環境変数から MongoDB URI を取得
-mongo_uri = os.environ.get("MONGODB_URI")
+MONGODB_URI = os.environ.get("MONGODB_URI")
+client = MongoClient(MONGODB_URI)
+db = client["emotion_db"]
 
-# MongoDB に接続
-client = MongoClient(mongo_uri)
-
-# 確認用：データベース一覧を表示
-try:
-    db_list = client.list_database_names()
-    print("✅ 接続成功！データベース一覧:", db_list)
-except Exception as e:
-    print("❌ 接続エラー:", e)
+@app.get("/mongo-test")
+def mongo_test():
+    try:
+        collections = db.list_collection_names()
+        return {"status": "✅ 接続成功", "collections": collections}
+    except Exception as e:
+        return {"status": "❌ 接続失敗", "error": str(e)}
