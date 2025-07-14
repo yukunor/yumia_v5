@@ -107,11 +107,13 @@ def extract_best_reference(current_emotion, index_data, category):
 
     if best_match:
         print(f"✅ {category}カテゴリ: ベストマッチが見つかりました")
-        return {
+        result = {
             "emotion": best_match,
             "source": f"{category}-match",
             "match_info": f"キーワード一致（{', '.join(input_keywords)}）"
         }
+        print(f"[DEBUG] extract_best_reference() の返却データ: {json.dumps(result, ensure_ascii=False, indent=2)}")
+        return result
 
     print(f"\U0001F7E5 {category}カテゴリ: 一致はあるが構成比が合致しない")
     return None
