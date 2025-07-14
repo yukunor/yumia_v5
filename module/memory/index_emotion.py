@@ -3,6 +3,8 @@ import os
 from datetime import datetime
 from collections import defaultdict, Counter
 from utils import logger  # ロガーのインポート
+from pymongo import MongoClient
+import certifi
 
 # === EMOTION_MAPから日本語キーを抽出 ===
 EMOTION_MAP = {
@@ -19,25 +21,6 @@ EMOTION_MAP = {
 # 全感情語を固定順で抽出（日本語）
 EMOTION_KEYS = list(EMOTION_MAP.keys())
 
-# === MongoDBへのインデックス保存（差し替え） ===
-def update_emotion_index(emotion_data, memory_path):
-    from pymongo import MongoClient
-    client = MongoClient(os.getenv("MONGO_URI"))
-    db = client.emotion_db
-    collection = db.emotion_index
-
-    index_entry = {
-        "date": emotion_data.get("date", datetime.now().strftime("%Y%m%d%H%M%S")),
-        "主感情": emotion_data.get("主感情", "Unknown"),
-        "構成比": normalize_emotion_vector(emotion_data.get("構成比", {})),
-        "キーワード": emotion_data.get("keywords", []),
-        "emotion": EMOTION_MAP.get(emotion_data.get("主感情"), "Unknown"),
-        "category": get_memory_category(emotion_data.get("重み", 0))
-    }
-
-    collection.insert_one(index_entry)
-    logger.info(f"[MongoDB] emotion_index に登録: {index_entry['date']}")
-
 # === 感情カテゴリ分類 ===
 def get_memory_category(weight):
     if weight >= 95:
@@ -50,6 +33,31 @@ def get_memory_category(weight):
 # === 構成比を固定順・0補完で正規化 ===
 def normalize_emotion_vector(構成比: dict) -> dict:
     return {emotion: 構成比.get(emotion, 0) for emotion in EMOTION_KEYS}
+
+# === MongoDBへのインデックス保存 ===
+def update_emotion_index(emotion_data, memory_path):
+    print("📥 MongoDBへのインデックス保存を開始します...")
+    try:
+        uri = "mongodb+srv://noriyukikondo99:Aa1192296%21@cluster0.oe0tni1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+        client = MongoClient(uri, tlsCAFile=certifi.where())
+        db = client["emotion_db"]
+        collection = db["emotion_index"]
+
+        index_entry = {
+            "date": emotion_data.get("date", datetime.now().strftime("%Y%m%d%H%M%S")),
+            "主感情": emotion_data.get("主感情", "Unknown"),
+            "構成比": normalize_emotion_vector(emotion_data.get("構成比", {})),
+            "キーワード": emotion_data.get("keywords", []),
+            "emotion": EMOTION_MAP.get(emotion_data.get("主感情"), "Unknown"),
+            "category": get_memory_category(emotion_data.get("重み", 0))
+        }
+
+        collection.insert_one(index_entry)
+        print(f"[✅] MongoDBにemotion_indexを登録しました: {index_entry['date']}")
+        logger.info(f"[MongoDB] emotion_index に登録: {index_entry['date']}")
+    except Exception as e:
+        print(f"[❌] MongoDB登録エラー: {e}")
+        logger.error(f"[ERROR] MongoDB登録失敗: {e}")
 
 # === 人格傾向抽出 ===
 def extract_personality_tendency(directory="memory/long/") -> dict:
@@ -78,4 +86,3 @@ def extract_personality_tendency(directory="memory/long/") -> dict:
         print(f"  - {emotion}: {count}件")
 
     return dict(emotion_counter.most_common(4))
-
