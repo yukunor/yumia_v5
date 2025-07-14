@@ -6,7 +6,7 @@ from module.memory.emotion_stats import synthesize_current_emotion
 import json
 import os
 from pymongo import MongoClient
-from bson import ObjectId
+from bson import ObjectId  # ← 必ずファイル先頭に追加してください
 
 def get_mongo_collection(category, emotion_label):
     try:
@@ -17,6 +17,79 @@ def get_mongo_collection(category, emotion_label):
     except Exception as e:
         logger.error(f"[ERROR] MongoDBコレクション取得失敗: {e}")
         return None
+
+def load_emotion_by_date(path, target_date):
+    print(f"[DEBUG] load_emotion_by_date() 呼び出し: path={path}, date={target_date}")
+
+    if path.startswith("mongo/"):
+        print("[DEBUG] MongoDB読み込みルートへ")
+        try:
+            parts = path.split("/")
+            if len(parts) == 3:
+                _, category, emotion_label = parts
+                print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, date={target_date}")
+                collection = get_mongo_collection(category, emotion_label)
+                if collection:
+                    # ① 単独レコード形式で存在するか検索
+                    record = collection.find_one({"date": target_date})
+                    if record:
+                        print(f"[DEBUG] MongoDB取得結果（単独）: {record}")
+                        return record
+
+                    # ② 履歴形式の中から一致するエントリを検索（data.履歴 または直下の履歴）
+                    all_docs = collection.find({})
+                    for doc in all_docs:
+                        print(f"[DEBUG] ドキュメント構造確認: {doc}")
+                        history_list = []
+                        if "履歴" in doc:
+                            history_list = doc["履歴"]
+                        elif "data" in doc and "履歴" in doc["data"]:
+                            history_list = doc["data"]["履歴"]
+                        print(f"[DEBUG] 履歴一覧: {history_list}")
+                        for entry in history_list:
+                            print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
+                            if entry.get("date") == target_date:
+                                print(f"[DEBUG] MongoDB履歴内一致: {entry}")
+                                return entry
+
+                    # ③ 最終手段：全レコードのdateを直接比較（型差異含め）
+                    print("[DEBUG] 最終確認: 全レコードを直接照合")
+                    all_docs = collection.find({})
+                    for doc in all_docs:
+                        doc_date = doc.get("date")
+                        print(f"[DEBUG] 最終照合: doc.date={doc_date} vs target_date={target_date}")
+                        if str(doc_date) == str(target_date):
+                            print(f"[DEBUG] MongoDB最終一致成功: {doc}")
+                            return doc
+
+        except Exception as e:
+            logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
+        return None
+
+    try:
+        if not os.path.exists(path):
+            logger.warning(f"[WARNING] 指定されたパスが存在しません: {path}")
+            return None
+
+        print(f"[DEBUG] ローカルファイル読み込み: {path}")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        print(f"[DEBUG] ローカルデータ型: {type(data)}")
+
+        if isinstance(data, list):
+            for item in reversed(data):
+                if item.get("date") == target_date:
+                    print(f"[DEBUG] ローカルファイルからの読み込み成功: {item}")
+                    return item
+
+        elif isinstance(data, dict) and "履歴" in data:
+            for item in reversed(data["履歴"]):
+                if item.get("date") == target_date:
+                    print(f"[DEBUG] ローカルファイル履歴からの読み込み成功: {item}")
+                    return item
+    except Exception as e:
+        logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
+    return None
 
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
@@ -56,9 +129,14 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print(f"[DEBUG] refer ({category}): {refer}")
             if refer:
                 emotion_data = refer.get("emotion", {})
-                if emotion_data:
+                path = refer.get("保存先")
+                date = refer.get("date")
+                print(f"[DEBUG] path: {path}, date: {date}")
+                full_emotion = load_emotion_by_date(path, date) if path and date else None
+                print(f"[DEBUG] load_emotion_by_date 結果: {full_emotion}")
+                if full_emotion:
                     reference_emotions.append({
-                        "emotion": emotion_data,
+                        "emotion": full_emotion,
                         "source": refer.get("source"),
                         "match_info": refer.get("match_info", "")
                     })
