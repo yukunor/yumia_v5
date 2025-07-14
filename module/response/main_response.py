@@ -39,8 +39,11 @@ def load_emotion_by_date(path, target_date):
                     # ② 履歴形式の中から一致するエントリを検索
                     all_docs = collection.find({})
                     for doc in all_docs:
+                        print(f"[DEBUG] ドキュメント構造確認: {doc}")
                         history = doc.get("data", {}).get("履歴", [])
+                        print(f"[DEBUG] 履歴一覧: {history}")
                         for entry in history:
+                            print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
                             if entry.get("date") == target_date:
                                 print(f"[DEBUG] MongoDB履歴内一致: {entry}")
                                 return entry
@@ -73,7 +76,6 @@ def load_emotion_by_date(path, target_date):
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
-
 
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
