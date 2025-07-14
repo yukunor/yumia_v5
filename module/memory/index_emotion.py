@@ -90,4 +90,3 @@ if __name__ == "__main__":
 
     update_emotion_index(sample_data, "memory/emotion_20250617")
     extract_personality_tendency()
-
