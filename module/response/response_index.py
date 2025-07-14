@@ -108,11 +108,17 @@ def extract_best_reference(current_emotion, index_data, category):
 
     if best_match:
         print(f"✅ {category}カテゴリ: ベストマッチが見つかりました")
+
+        # 保存先が無ければ補完する
+        save_path = best_match.get("保存先")
+        if not save_path:
+            save_path = f"mongo/{category}/{best_match.get('emotion', 'Unknown')}"
+
         result = {
             "emotion": best_match,
             "source": f"{category}-match",
             "match_info": f"キーワード一致（{', '.join(input_keywords)}）",
-            "保存先": best_match.get("保存先"),
+            "保存先": save_path,
             "date": best_match.get("date")
         }
 
