@@ -96,8 +96,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print(f"[DEBUG] refer ({category}): {refer}")
             if refer:
                 emotion_data = refer.get("emotion", {})
-                path = emotion_data.get("保存先")
-                date = emotion_data.get("date")
+                path = refer.get("保存先")  # 修正箇所
+                date = refer.get("date")   # 修正箇所
                 print(f"[DEBUG] path: {path}, date: {date}")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
                 print(f"[DEBUG] load_emotion_by_date 結果: {full_emotion}")
@@ -161,4 +161,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
