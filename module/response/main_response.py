@@ -6,6 +6,7 @@ from module.memory.emotion_stats import synthesize_current_emotion
 import json
 import os
 from pymongo import MongoClient
+from bson import ObjectId  # ← 必ずファイル先頭に追加してください
 
 def get_mongo_collection(category, emotion_label):
     try:
@@ -29,9 +30,13 @@ def load_emotion_by_date(path, target_date):
                 print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, _id={target_date}")
                 collection = get_mongo_collection(category, emotion_label)
                 if collection:
-                    record = collection.find_one({"_id": target_date})
-                    if not record:
-                        print(f"[DEBUG] MongoDB: _id={target_date} で一致するレコードなし")
+                    try:
+                        record = collection.find_one({"_id": ObjectId(target_date)})
+                        if not record:
+                            print(f"[DEBUG] MongoDB: ObjectId({target_date}) で一致するレコードなし")
+                    except Exception as e:
+                        print(f"[DEBUG] MongoDB: ObjectId({target_date}) に変換失敗または見つからず: {e}")
+                        record = None
                     if record:
                         print(f"[DEBUG] MongoDB取得結果: {record}")
                         return record
@@ -63,7 +68,6 @@ def load_emotion_by_date(path, target_date):
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
-
 
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
