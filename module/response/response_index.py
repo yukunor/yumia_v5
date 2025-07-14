@@ -4,6 +4,7 @@ import re
 from pymongo import MongoClient
 import certifi
 from utils import logger  # 共通ロガーをインポート
+from bson import ObjectId
 
 # MongoDB から index データを取得
 def load_index():
