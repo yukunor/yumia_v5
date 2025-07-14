@@ -62,20 +62,19 @@ def find_best_match_by_composition(current_composition, candidates):
     print(f"\U0001F50E 構成比マッチング対象数: {len(candidates)}")
 
     def is_valid_candidate(candidate_comp, base_comp):
-        base_keys = list(base_comp.keys())
+        # ノイズ除去（5以下は無視）
+        base_filtered = {k: v for k, v in base_comp.items() if v > 5}
+        cand_filtered = {k: v for k, v in candidate_comp.items() if v > 5}
+
+        base_keys = list(base_filtered.keys())
+        shared_keys = set(base_filtered.keys()) & set(cand_filtered.keys())
         required_match = max(len(base_keys) - 1, 1)
-
-        # 完全一致が必要なケース（感情が1つのみ）
-        if len(base_keys) == 1:
-            key = base_keys[0]
-            return candidate_comp.get(key, None) == base_comp.get(key, None)
-
         matched = 0
-        for key in base_keys:
-            if key in candidate_comp:
-                diff = abs(candidate_comp[key] - base_comp[key])
-                if diff <= 30:
-                    matched += 1
+
+        for key in shared_keys:
+            diff = abs(base_filtered.get(key, 0) - cand_filtered.get(key, 0))
+            if diff <= 30:
+                matched += 1
 
         return matched >= required_match
 
@@ -116,4 +115,5 @@ def extract_best_reference(current_emotion, index_data, category):
 
     print(f"\U0001F7E5 {category}カテゴリ: 一致はあるが構成比が合致しない")
     return None
+
 
