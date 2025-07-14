@@ -48,6 +48,16 @@ def load_emotion_by_date(path, target_date):
                                 print(f"[DEBUG] MongoDB履歴内一致: {entry}")
                                 return entry
 
+                    # ③ 最終手段：全レコードのdateを直接比較
+                    print("[DEBUG] 最終確認: 全レコードを直接照合")
+                    all_docs = collection.find({})
+                    for doc in all_docs:
+                        doc_date = doc.get("date")
+                        print(f"[DEBUG] 最終照合: doc.date={doc_date} vs target_date={target_date}")
+                        if str(doc_date) == str(target_date):
+                            print(f"[DEBUG] MongoDB最終一致成功: {doc}")
+                            return doc
+
         except Exception as e:
             logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
         return None
