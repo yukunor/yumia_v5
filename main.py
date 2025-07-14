@@ -1,14 +1,14 @@
-from pymongo import MongoClient
-import certifi
-import os
+#from pymongo import MongoClient
+#import certifi
+#import os
 
-uri = os.getenv("MONGODB_URI")
+#uri = os.getenv("MONGODB_URI")
 
-try:
-    client = MongoClient(uri, tlsCAFile=certifi.where())
-    print("✅ MongoDBに接続成功:", client.list_database_names())
-except Exception as e:
-    print("❌ MongoDB接続失敗:", e)
+#try:
+    #client = MongoClient(uri, tlsCAFile=certifi.where())
+    #print("✅ MongoDBに接続成功:", client.list_database_names())
+#except Exception as e:
+    #print("❌ MongoDB接続失敗:", e)
 
 
 
