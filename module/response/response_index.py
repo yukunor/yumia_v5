@@ -1,48 +1,66 @@
 import json
 import os
 import re
+from pymongo import MongoClient
+import certifi
 from utils import logger  # 共通ロガーをインポート
 
+# MongoDB から index データを取得
 def load_index():
-    with open("index/emotion_index.jsonl", "r", encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
+    print("📥 [STEP] MongoDBからemotion_indexを取得します...")
+    try:
+        uri = "mongodb+srv://noriyukikondo99:Aa1192296%21@cluster0.oe0tni1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+        client = MongoClient(uri, tlsCAFile=certifi.where())
+        db = client["emotion_db"]
+        collection = db["emotion_index"]
+        data = list(collection.find({}))
+        print(f"✅ [SUCCESS] emotion_index データ件数: {len(data)}")
+        return data
+    except Exception as e:
+        print(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
+        return []
 
+# インデックスをカテゴリに分類
 def load_and_categorize_index():
+    print("📂 [STEP] インデックスをカテゴリごとに分類します...")
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
 
     for item in all_index:
-        path = os.path.normpath(item.get("保存先", ""))
-        parts = re.split(r"[\\/]", path)
-        category = parts[-2] if len(parts) >= 2 else "unknown"
-
+        category = item.get("category", "unknown")
         if category in categorized:
             categorized[category].append(item)
 
+    for cat, items in categorized.items():
+        print(f"📊 {cat}カテゴリ: {len(items)} 件")
+
     return categorized
 
+# 感情構成比の差異スコア（低いほど似ている）
 def compute_composition_difference(comp1, comp2):
     keys = set(k for k in comp1.keys() | comp2.keys())
     return sum(abs(comp1.get(k, 0) - comp2.get(k, 0)) for k in keys)
 
+# キーワード一致でフィルタ
 def filter_by_keywords(index_data, input_keywords):
-    return [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
+    print(f"🔍 キーワードフィルタ適用: {input_keywords}")
+    filtered = [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
+    print(f"🎯 一致件数: {len(filtered)}")
+    return filtered
 
+# 類似スコアを計算
 def calculate_composition_score(base_comp: dict, target_comp: dict) -> float:
-    """
-    base_compとtarget_compの感情構成比の類似スコアを計算する。
-    各感情成分の差分の逆数を使って、全体のスコアを計算する。
-    Returns:
-        float: 類似スコア。高いほど類似。
-    """
     score = 0.0
     for key in base_comp:
         if key in target_comp:
             diff = abs(base_comp[key] - target_comp[key])
-            score += max(0, 100 - diff)  # 差分が小さいほどスコアが高くなる
+            score += max(0, 100 - diff)
     return score
 
+# 構成比で最も近いデータを選出
 def find_best_match_by_composition(current_composition, candidates):
+    print(f"🔎 構成比マッチング対象数: {len(candidates)}")
+    
     def is_valid_candidate(candidate_comp, base_comp):
         base_keys = set(base_comp.keys())
         candidate_keys = set(candidate_comp.keys())
@@ -58,39 +76,41 @@ def find_best_match_by_composition(current_composition, candidates):
 
         return matched >= required_match
 
-    valid_candidates = []
-    for candidate in candidates:
-        if is_valid_candidate(candidate["構成比"], current_composition):
-            valid_candidates.append(candidate)
+    valid_candidates = [
+        c for c in candidates if is_valid_candidate(c["構成比"], current_composition)
+    ]
 
+    print(f"✅ 有効な候補数: {len(valid_candidates)}")
     if not valid_candidates:
-        return None  # ←条件を満たす候補がなければ None を返す
+        print("❌ 構成比マッチ候補なし")
+        return None
 
     best = max(valid_candidates, key=lambda c: calculate_composition_score(current_composition, c["構成比"]))
+    print("🏅 最も構成比が近い候補を選出")
     return best
 
+# 最適な参照データを抽出
 def extract_best_reference(current_emotion, index_data, category):
-    input_keywords = current_emotion.get("keywords", [])
-    print(f"[DEBUG] [{category}] 入力キーワード: {input_keywords}")
+    print(f"\n============================")
+    print(f"📘 [カテゴリ: {category}] 参照候補の抽出開始")
     
+    input_keywords = current_emotion.get("keywords", [])
     matched = filter_by_keywords(index_data, input_keywords)
-    print(f"[DEBUG] [{category}] キーワード一致件数: {len(matched)}")
 
     if not matched:
         print(f"🟨 {category}カテゴリ: キーワード一致なし → スキップ")
         return None
 
     best_match = find_best_match_by_composition(current_emotion.get("構成比", {}), matched)
-    print(f"[DEBUG] [{category}] 最も近い構成比のデータ: {best_match}")
 
     if best_match:
-        print(f"✅ {category}カテゴリ: キーワード一致あり → 最も近い構成比の1件を採用")
+        print(f"✅ {category}カテゴリ: ベストマッチが見つかりました")
         return {
             "emotion": best_match,
             "source": f"{category}-match",
             "match_info": f"キーワード一致（{', '.join(input_keywords)}）"
         }
 
-    print(f"🟥 {category}カテゴリ: キーワード一致ありだが構成比マッチなし")
+    print(f"🟥 {category}カテゴリ: 一致はあるが構成比が合致しない")
     return None
 
