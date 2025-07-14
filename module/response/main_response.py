@@ -29,9 +29,12 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     best_match = None
 
     # 追加: 現在の気分を合成して取得
+    print("[DEBUG] 現在の気分を合成中...")
     current_feeling_data = synthesize_current_emotion()
     current_feeling = current_feeling_data.get("現在の気分", {})
     long_base_emotion = current_feeling_data.get("主感情", "未定義")
+    print(f"[DEBUG] 合成された現在の気分: {current_feeling}")
+    print(f"[DEBUG] 合成された主感情: {long_base_emotion}")
 
     try:
         print("✎ステップ①: 感情推定 開始")
@@ -40,7 +43,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print(f"💫推定応答内容（raw）: {raw_response}")
         print(f"💞構成比（主感情: {initial_emotion.get('主感情', '未定義')}）: (構成比: {summary_str})")
 
-        # ✅ GPT推定結果をデータセットに記録
         save_emotion_sample(user_input, raw_response, initial_emotion.get("構成比", {}))
 
     except Exception as e:
@@ -62,11 +64,14 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ③: キーワード一致＆構成比類似 抽出 開始")
         for category in ["short", "intermediate", "long"]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
+            print(f"[DEBUG] refer ({category}): {refer}")
             if refer:
                 emotion_data = refer.get("emotion", {})
                 path = emotion_data.get("保存先")
                 date = emotion_data.get("date")
+                print(f"[DEBUG] path: {path}, date: {date}")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
+                print(f"[DEBUG] load_emotion_by_date 結果: {full_emotion}")
                 if full_emotion:
                     keywords = emotion_data.get("キーワード", [])
                     match_info = refer.get("match_info", "")
@@ -78,6 +83,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
 
         best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
+        print(f"[DEBUG] 最終的なベストマッチ: {best_match}")
 
         if best_match is None:
             print("✎ステップ④: 一致なし → 仮応答を使用")
@@ -85,11 +91,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             response_emotion = initial_emotion
         else:
             print("✎ステップ④: 応答生成と感情再推定 開始")
-
-            # 長期感情（人格基盤）と現在の気分（短期〜中期）を
-            # プロンプトに渡すため、contextに組み込み
             context = [best_match]
-            # ここで current_feeling と long_base_emotion を含めた追加情報をcontextに挿入
             context.append({
                 "emotion": {
                     "人格基盤（long_base_emotion）": long_base_emotion,
@@ -98,7 +100,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                 "source": "現在の気分合成データ",
                 "match_info": "人格基盤と現在の気分のプロンプト挿入用"
             })
-
             final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, context)
 
     except Exception as e:
@@ -125,11 +126,9 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         else:
             print("📌 参照感情データ: 参照なし")
 
-        # ✅ 感情保存用に渡す（emotion_index 用）
         response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
 
-        # ✅ 短期感情履歴として emotion_history.jsonl に記録（全感情で補完してから）
         padded_ratio = pad_emotion_vector(response_emotion.get("構成比", {}))
         response_emotion["構成比"] = padded_ratio
         append_emotion_history(response_emotion)
@@ -138,4 +137,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
