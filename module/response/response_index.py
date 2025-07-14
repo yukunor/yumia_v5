@@ -112,10 +112,15 @@ def extract_best_reference(current_emotion, index_data, category):
             "source": f"{category}-match",
             "match_info": f"キーワード一致（{', '.join(input_keywords)}）"
         }
-        print(f"[DEBUG] extract_best_reference() の返却データ: {json.dumps(result, ensure_ascii=False, indent=2)}")
+
+        # ObjectIdを文字列に変換してから表示
+        def convert_objectid(obj):
+            if isinstance(obj, ObjectId):
+                return str(obj)
+            raise TypeError(f"Type {type(obj)} not serializable")
+
+        print(f"[DEBUG] extract_best_reference() の返却データ: {json.dumps(result, default=convert_objectid, ensure_ascii=False, indent=2)}")
         return result
 
     print(f"\U0001F7E5 {category}カテゴリ: 一致はあるが構成比が合致しない")
     return None
-
-
