@@ -21,22 +21,25 @@ def load_emotion_by_date(path, target_date):
     print(f"[DEBUG] load_emotion_by_date() 呼び出し: path={path}, date={target_date}")
 
     if path.startswith("mongo/"):
+        print("[DEBUG] MongoDB読み込みルートへ")
         try:
             parts = path.split("/")
             if len(parts) == 3:
                 _, category, emotion_label = parts
+                print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, date={target_date}")
                 collection = get_mongo_collection(category, emotion_label)
                 if collection:
-                    # まず文字列として検索
                     record = collection.find_one({"date": target_date})
                     if not record:
+                        print(f"[DEBUG] MongoDB: date={target_date} で一致するレコードなし（文字列）")
                         try:
-                            # 整数に変換して再検索
                             record = collection.find_one({"date": int(target_date)})
+                            if not record:
+                                print(f"[DEBUG] MongoDB: date={int(target_date)} で一致するレコードなし（整数）")
                         except ValueError:
-                            pass
+                            print(f"[DEBUG] MongoDB: int({target_date}) に変換失敗")
                     if record:
-                        print(f"[DEBUG] MongoDBからの読み込み成功: {record}")
+                        print(f"[DEBUG] MongoDB取得結果: {record}")
                         return record
         except Exception as e:
             logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
@@ -47,8 +50,10 @@ def load_emotion_by_date(path, target_date):
             logger.warning(f"[WARNING] 指定されたパスが存在しません: {path}")
             return None
 
+        print(f"[DEBUG] ローカルファイル読み込み: {path}")
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        print(f"[DEBUG] ローカルデータ型: {type(data)}")
 
         if isinstance(data, list):
             for item in reversed(data):
@@ -103,8 +108,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             print(f"[DEBUG] refer ({category}): {refer}")
             if refer:
                 emotion_data = refer.get("emotion", {})
-                path = refer.get("保存先")  # 修正箇所
-                date = refer.get("date")   # 修正箇所
+                path = refer.get("保存先")
+                date = refer.get("date")
                 print(f"[DEBUG] path: {path}, date: {date}")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
                 print(f"[DEBUG] load_emotion_by_date 結果: {full_emotion}")
