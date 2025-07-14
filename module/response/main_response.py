@@ -27,16 +27,17 @@ def load_emotion_by_date(path, target_date):
             parts = path.split("/")
             if len(parts) == 3:
                 _, category, emotion_label = parts
-                print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, _id={target_date}")
+                print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, date={target_date}")
                 collection = get_mongo_collection(category, emotion_label)
                 if collection:
-                    try:
-                        record = collection.find_one({"_id": ObjectId(target_date)})
-                        if not record:
-                            print(f"[DEBUG] MongoDB: ObjectId({target_date}) で一致するレコードなし")
-                    except Exception as e:
-                        print(f"[DEBUG] MongoDB: ObjectId({target_date}) に変換失敗または見つからず: {e}")
-                        record = None
+                    record = collection.find_one({"date": target_date})
+                    if not record:
+                        try:
+                            record = collection.find_one({"date": int(target_date)})
+                            if not record:
+                                print(f"[DEBUG] MongoDB: date={int(target_date)} で一致するレコードなし（整数）")
+                        except ValueError:
+                            print(f"[DEBUG] MongoDB: int({target_date}) に変換失敗")
                     if record:
                         print(f"[DEBUG] MongoDB取得結果: {record}")
                         return record
