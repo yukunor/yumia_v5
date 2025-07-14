@@ -27,7 +27,14 @@ def load_emotion_by_date(path, target_date):
                 _, category, emotion_label = parts
                 collection = get_mongo_collection(category, emotion_label)
                 if collection:
+                    # まず文字列として検索
                     record = collection.find_one({"date": target_date})
+                    if not record:
+                        try:
+                            # 整数に変換して再検索
+                            record = collection.find_one({"date": int(target_date)})
+                        except ValueError:
+                            pass
                     if record:
                         print(f"[DEBUG] MongoDBからの読み込み成功: {record}")
                         return record
