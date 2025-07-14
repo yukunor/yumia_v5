@@ -111,7 +111,9 @@ def extract_best_reference(current_emotion, index_data, category):
         result = {
             "emotion": best_match,
             "source": f"{category}-match",
-            "match_info": f"キーワード一致（{', '.join(input_keywords)}）"
+            "match_info": f"キーワード一致（{', '.join(input_keywords)}）",
+            "保存先": best_match.get("保存先"),
+            "date": best_match.get("date")
         }
 
         # ObjectIdを文字列に変換してから表示
