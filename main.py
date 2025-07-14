@@ -16,7 +16,6 @@
 import sys
 import os
 import re
-import threading
 import traceback
 
 from fastapi import FastAPI, HTTPException
@@ -76,8 +75,8 @@ def chat(user_message: UserMessage):
         append_history("system", sanitized_response)
         print("📝 応答履歴追加完了")
 
-        print("💾 感情保存スレッド開始")
-        threading.Thread(target=memory.handle_emotion, args=(emotion_data,)).start()
+        print("💾 感情保存処理（同期実行）開始")
+        memory.handle_emotion(emotion_data)
 
         print("📤 応答と履歴を返却")
         return {
@@ -97,11 +96,6 @@ def get_ui():
 @app.get("/history")
 def get_history():
     try:
-        return {"history": load_history()}
-    except Exception as e:
-        logger.exception("履歴取得中に例外が発生しました")
-        raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
-
         return {"history": load_history()}
     except Exception as e:
         logger.exception("履歴取得中に例外が発生しました")
