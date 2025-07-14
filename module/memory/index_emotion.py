@@ -49,7 +49,8 @@ def update_emotion_index(emotion_data, memory_path):
             "構成比": normalize_emotion_vector(emotion_data.get("構成比", {})),
             "キーワード": emotion_data.get("keywords", []),
             "emotion": EMOTION_MAP.get(emotion_data.get("主感情"), "Unknown"),
-            "category": get_memory_category(emotion_data.get("重み", 0))
+            "category": get_memory_category(emotion_data.get("重み", 0)),
+            "保存先": memory_path
         }
 
         print(f"[DEBUG] インデックスに追加する内容: {index_entry}")
