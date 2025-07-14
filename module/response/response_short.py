@@ -57,3 +57,4 @@ def match_short_keywords(now_emotion: dict, index_data: list) -> list:
     results.sort(key=lambda x: x["match_score"])
     return results[:3]
 
+
