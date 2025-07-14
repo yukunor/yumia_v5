@@ -30,17 +30,21 @@ def load_emotion_by_date(path, target_date):
                 print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, date={target_date}")
                 collection = get_mongo_collection(category, emotion_label)
                 if collection:
+                    # ① 単独レコード形式で存在するか検索
                     record = collection.find_one({"date": target_date})
-                    if not record:
-                        try:
-                            record = collection.find_one({"date": int(target_date)})
-                            if not record:
-                                print(f"[DEBUG] MongoDB: date={int(target_date)} で一致するレコードなし（整数）")
-                        except ValueError:
-                            print(f"[DEBUG] MongoDB: int({target_date}) に変換失敗")
                     if record:
-                        print(f"[DEBUG] MongoDB取得結果: {record}")
+                        print(f"[DEBUG] MongoDB取得結果（単独）: {record}")
                         return record
+
+                    # ② 履歴形式の中から一致するエントリを検索
+                    all_docs = collection.find({})
+                    for doc in all_docs:
+                        history = doc.get("data", {}).get("履歴", [])
+                        for entry in history:
+                            if entry.get("date") == target_date:
+                                print(f"[DEBUG] MongoDB履歴内一致: {entry}")
+                                return entry
+
         except Exception as e:
             logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
         return None
@@ -69,6 +73,7 @@ def load_emotion_by_date(path, target_date):
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
+
 
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
