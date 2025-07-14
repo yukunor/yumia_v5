@@ -32,6 +32,7 @@ def is_contextually_related(message_a, message_b):
             temperature=0.0
         )
         answer = response.choices[0].message.content.strip()
+        print(f"[DEBUG] GPT文脈判定応答: {answer}")  # ← 追加
         return "はい" in answer
     except Exception as e:
         logger.error(f"つながり判定のGPT呼び出しに失敗: {e}")
@@ -53,13 +54,17 @@ def select_contextual_history(full_history, max_turns=10):
         current = full_history[index]
         current_time = parse_timestamp(current)
 
+        print(f"[DEBUG] チェック中: {current['message']}")  # ← 追加
+
         if current_time < cutoff_time:
             related = is_contextually_related(current["message"], selected[0]["message"])
+            print(f"[DEBUG] 文脈判定結果: {related}")  # ← 追加
             if not related:
                 break
 
         selected.insert(0, current)
         index -= 1
 
+    print(f"[DEBUG] 抽出された履歴数: {len(selected)}")  # ← 追加
     return selected
 
