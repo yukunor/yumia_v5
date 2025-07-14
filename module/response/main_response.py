@@ -36,19 +36,23 @@ def load_emotion_by_date(path, target_date):
                         print(f"[DEBUG] MongoDB取得結果（単独）: {record}")
                         return record
 
-                    # ② 履歴形式の中から一致するエントリを検索
+                    # ② 履歴形式の中から一致するエントリを検索（data.履歴 または直下の履歴）
                     all_docs = collection.find({})
                     for doc in all_docs:
                         print(f"[DEBUG] ドキュメント構造確認: {doc}")
-                        history = doc.get("data", {}).get("履歴", [])
-                        print(f"[DEBUG] 履歴一覧: {history}")
-                        for entry in history:
+                        history_list = []
+                        if "履歴" in doc:
+                            history_list = doc["履歴"]
+                        elif "data" in doc and "履歴" in doc["data"]:
+                            history_list = doc["data"]["履歴"]
+                        print(f"[DEBUG] 履歴一覧: {history_list}")
+                        for entry in history_list:
                             print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
                             if entry.get("date") == target_date:
                                 print(f"[DEBUG] MongoDB履歴内一致: {entry}")
                                 return entry
 
-                    # ③ 最終手段：全レコードのdateを直接比較
+                    # ③ 最終手段：全レコードのdateを直接比較（型差異含め）
                     print("[DEBUG] 最終確認: 全レコードを直接照合")
                     all_docs = collection.find({})
                     for doc in all_docs:
