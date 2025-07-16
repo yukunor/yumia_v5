@@ -151,10 +151,16 @@ def generate_gpt_response_from_history(history):
     full_response_clean = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", full_response_clean, flags=re.DOTALL)
     return full_response_clean.strip()
 
-def generate_emotion_from_prompt_simple(user_input: str) -> tuple[str, dict]:
+def generate_emotion_from_prompt_simple(user_input: str, current_emotion: dict = None) -> tuple[str, dict]:
     system_prompt = load_system_prompt_cached()
     user_prompt = load_emotion_prompt()
-    prompt = f"{user_prompt}\nユーザー発言: {user_input}"
+
+    if current_emotion:
+        emotion_context = f"\n現在の気分として、以下の感情構成比があります:\n{json.dumps(current_emotion, ensure_ascii=False)}\n"
+    else:
+        emotion_context = ""
+
+    prompt = f"{user_prompt}{emotion_context}\nユーザー発言: {user_input}"
 
     try:
         response = client.chat.completions.create(
@@ -204,6 +210,7 @@ def generate_emotion_from_prompt_simple(user_input: str) -> tuple[str, dict]:
     clean_text = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
 
     return clean_text, emotion_data
+
 
 def generate_emotion_from_prompt_with_context(user_input: str, reference_emotions: list) -> tuple[str, dict]:
     system_prompt = load_system_prompt_cached()
