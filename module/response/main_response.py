@@ -1,20 +1,15 @@
 from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
 from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
-from utils import logger
+from utils import logger, get_mongo_client
 from module.memory.main_memory import handle_emotion, save_emotion_sample, append_emotion_history, pad_emotion_vector
 from module.memory.emotion_stats import synthesize_current_emotion
 import json
 import os
-from pymongo import MongoClient
-from bson import ObjectId  # ← 必ずファイル先頭に追加してください
+from bson import ObjectId
 
-# 初回のみ接続し、以降は再利用
-client = MongoClient(
-    "mongodb://localhost:27017/",
-    serverSelectionTimeoutMS=1000,
-    connectTimeoutMS=1000,
-    socketTimeoutMS=1000
-)
+client = get_mongo_client()
+if client is None:
+    raise ConnectionError("[ERROR] MongoDBクライアントの取得に失敗しました")
 db = client["emotion_db"]
 
 def get_mongo_collection(category, emotion_label):
@@ -36,7 +31,6 @@ def load_emotion_by_date(path, target_date):
                 _, category, emotion_label = parts
                 print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, date={target_date}")
 
-                # MongoDB接続確認（ping）
                 try:
                     db.client.admin.command("ping")
                     print("[DEBUG] MongoDB ping成功: 接続は有効")
@@ -47,13 +41,11 @@ def load_emotion_by_date(path, target_date):
                 collection = get_mongo_collection(category, emotion_label)
                 print(f"[DEBUG] collection の有無: {collection}")
                 if collection is not None:
-                    # 単独レコード or dateフィールドでの直接一致検索
                     record = collection.find_one({"date": target_date})
                     if record:
                         print(f"[DEBUG] MongoDB取得結果（単独）: {record}")
                         return record
 
-                    # 履歴形式（data.履歴 or 直下の履歴）からの検索
                     print("[DEBUG] collection.find({}) 実行")
                     docs = list(collection.find({}))
                     print(f"[DEBUG] 取得ドキュメント数: {len(docs)}")
@@ -71,7 +63,6 @@ def load_emotion_by_date(path, target_date):
                                 print(f"[DEBUG] MongoDB履歴内一致: {entry}")
                                 return entry
 
-                    # 最後に全ドキュメントの date を照合
                     print("[DEBUG] 最終確認: 全レコードを直接照合")
                     for doc in docs:
                         if str(doc.get("date")) == str(target_date):
