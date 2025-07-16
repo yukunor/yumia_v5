@@ -157,7 +157,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
         print(f"💬 最終応答内容（再掲）:\n💭{final_response.strip()}")
         reference_data = best_match or {"emotion": {}, "source": "不明", "date": "不明"}
-        print(f"[INFO] 応答に使用した感情データ: source={reference_data.get('source')}, date={reference_data.get('date')}, 主感情={reference_data['emotion'].get('主感情')}")
+        print(f"[INFO] 応答に使用した感情データ: source={best_match.get('source')}, date={best_match.get('date')}, 主感情={best_match.get('emotion', {}).get('主感情')}")
+
 
         response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
