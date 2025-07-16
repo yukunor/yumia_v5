@@ -37,8 +37,11 @@ def load_emotion_by_date(path, target_date):
                         return record
 
                     # ② 履歴形式の中から一致するエントリを検索（data.履歴 または直下の履歴）
+                    print("[DEBUG] collection.find({}) 実行")
                     all_docs = collection.find({})
-                    for doc in all_docs:
+                    docs = list(all_docs)
+                    print(f"[DEBUG] 取得ドキュメント数: {len(docs)}")
+                    for doc in docs:
                         print(f"[DEBUG] ドキュメント構造確認: {doc}")
                         history_list = []
                         if "履歴" in doc:
@@ -55,8 +58,7 @@ def load_emotion_by_date(path, target_date):
 
                     # ③ 最終手段：全レコードのdateを直接比較（型差異含め）
                     print("[DEBUG] 最終確認: 全レコードを直接照合")
-                    all_docs = collection.find({})
-                    for doc in all_docs:
+                    for doc in docs:
                         doc_date = doc.get("date")
                         print(f"[DEBUG] 最終照合: doc.date={doc_date} vs target_date={target_date}")
                         if str(doc_date) == str(target_date):
@@ -92,6 +94,7 @@ def load_emotion_by_date(path, target_date):
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
+
 
 
 
