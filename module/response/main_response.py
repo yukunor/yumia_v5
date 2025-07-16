@@ -20,68 +20,6 @@ def get_mongo_collection(category, emotion_label):
         logger.error(f"[ERROR] MongoDBコレクション取得失敗: {e}")
         return None
 
-def load_emotion_by_date(path, target_date):
-    print(f"[DEBUG] load_emotion_by_date() 呼び出し: path={path}, date={target_date}")
-
-    if path.startswith("mongo/"):
-        print("[DEBUG] MongoDB読み込みルートへ")
-        try:
-            parts = path.split("/")
-            if len(parts) == 3:
-                _, category, emotion_label = parts
-                print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, date={target_date}")
-
-                try:
-                    db.client.admin.command("ping")
-                    print("[DEBUG] MongoDB ping成功: 接続は有効")
-                except Exception as e:
-                    print(f"[DEBUG] MongoDB ping失敗: {e}")
-                    return None
-
-                collection = db["emotion_data"]
-                doc = collection.find_one({"category": category, "emotion": emotion_label})
-                print(f"[DEBUG] emotion_data コレクション検索: {doc is not None}")
-
-                if doc and "data" in doc and "履歴" in doc["data"]:
-                    for entry in doc["data"]["履歴"]:
-                        print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
-                        if str(entry.get("date")) == str(target_date):
-                            print(f"[DEBUG] MongoDB履歴内一致: {entry}")
-                            return entry
-
-                print("[DEBUG] 該当データが見つかりませんでした")
-        except Exception as e:
-            logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
-            print(f"[DEBUG] 例外発生: {e}")
-        return None
-
-    try:
-        if not os.path.exists(path):
-            logger.warning(f"[WARNING] 指定されたパスが存在しません: {path}")
-            return None
-
-        print(f"[DEBUG] ローカルファイル読み込み: {path}")
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        print(f"[DEBUG] ローカルデータ型: {type(data)}")
-
-        if isinstance(data, list):
-            for item in reversed(data):
-                if str(item.get("date")) == str(target_date):
-                    print(f"[DEBUG] ローカルファイルからの読み込み成功: {item}")
-                    return item
-
-        elif isinstance(data, dict) and "履歴" in data:
-            for item in reversed(data["履歴"]):
-                print(f"[DEBUG] ローカルファイル照合中: item.date={repr(item.get('date'))} vs target_date={repr(target_date)}")
-                if str(item.get("date")) == str(target_date):
-                    print(f"[DEBUG] ローカルファイル履歴からの読み込み成功: {item}")
-                    return item
-
-    except Exception as e:
-        logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
-    return None
-
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
@@ -141,6 +79,11 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                 "source": "現在の気分合成データ",
                 "match_info": "現在の気分のプロンプト挿入用"
             })
+
+            # ✅ 応答前の構成比を要約出力
+            summary = summarize_feeling(best_match.get("emotion", {}).get("構成比", {}))
+            print(f"💞参照感情6感情サマリー: {summary}")
+
             final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, context)
 
     except Exception as e:
@@ -150,8 +93,8 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     try:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
         print(f"💬 最終応答内容（再掲）:\n💭{final_response.strip()}")
+        reference_data = best_match or {"emotion": {}, "source": "不明", "date": "不明"}
         print(f"[INFO] 応答に使用した感情データ: source={reference_data.get('source')}, date={reference_data.get('date')}, 主感情={reference_data['emotion'].get('主感情')}")
-
 
         response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
@@ -160,7 +103,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         response_emotion["構成比"] = padded_ratio
         append_emotion_history(response_emotion)
 
-        # 現在の感情と応答感情を合成し保存
         merged = merge_emotion_vectors(current_feeling, response_emotion.get("構成比", {}))
         save_current_emotion(merged)
 
@@ -168,3 +110,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
