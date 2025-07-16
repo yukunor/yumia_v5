@@ -61,30 +61,43 @@ def update_emotion_index(emotion_data, memory_path):
         print(f"[❌] MongoDB登録エラー: {e}")
         logger.error(f"[ERROR] MongoDB登録失敗: {e}")
 
-# === 人格傾向抽出 ===
-def extract_personality_tendency(directory="memory/long/") -> dict:
+def extract_personality_tendency() -> dict:
+    """
+    MongoDBのlongカテゴリから履歴の主感情を集計し、人格傾向（上位4つ）を抽出する。
+    """
     emotion_counter = Counter()
-    for filename in os.listdir(directory):
-        if not filename.endswith(".json"):
-            continue
-        file_path = os.path.join(directory, filename)
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, dict) and data.get("データ種別") == "emotion":
-                    main_emotion = data.get("主感情")
+    try:
+        client = get_mongo_client()
+        db = client["emotion_db"]
+        print("📡 MongoDBクライアント接続完了 → longカテゴリを走査")
+
+        # long_〜 の全コレクションを対象にする
+        collection_names = db.list_collection_names()
+        long_collections = [name for name in collection_names if name.startswith("long_")]
+
+        for col_name in long_collections:
+            collection = db[col_name]
+            docs = list(collection.find({}))
+
+            for doc in docs:
+                # フィールド構造に応じて履歴を抽出
+                history_list = []
+                if "履歴" in doc:
+                    history_list = doc["履歴"]
+                elif "data" in doc and "履歴" in doc["data"]:
+                    history_list = doc["data"]["履歴"]
+
+                for entry in history_list:
+                    main_emotion = entry.get("主感情")
                     if main_emotion:
                         emotion_counter[main_emotion] += 1
-                elif isinstance(data, dict) and "履歴" in data:
-                    for item in data["履歴"]:
-                        main_emotion = item.get("主感情")
-                        if main_emotion:
-                            emotion_counter[main_emotion] += 1
-        except Exception as e:
-            logger.warning(f"[WARN] 人格傾向データ読み込み失敗（無視）: {file_path} | {e}")
 
-    print("📊 現在の人格傾向（long保存データの主感情カウント）:")
-    for emotion, count in emotion_counter.most_common():
-        print(f"  - {emotion}: {count}件")
+        print("📊 現在の人格傾向（long保存データの主感情カウント）:")
+        for emotion, count in emotion_counter.most_common():
+            print(f"  - {emotion}: {count}件")
 
-    return dict(emotion_counter.most_common(4))
+        return dict(emotion_counter.most_common(4))
+
+    except Exception as e:
+        logger.error(f"[ERROR] 人格傾向データ抽出失敗: {e}")
+        return {}
