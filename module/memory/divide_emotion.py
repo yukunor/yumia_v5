@@ -1,8 +1,6 @@
 import os
 import json
-from pymongo import MongoClient
-import certifi
-from utils import logger  # ロガーのインポート
+from utils import logger, get_mongo_client  # ロガーとMongo関数のインポート
 
 # 日本語感情名 → 英語ファイル名の対応辞書
 EMOTION_MAP = {
@@ -39,8 +37,10 @@ def divide_and_store(emotion_data: dict) -> str:
         if not english_emotion:
             raise ValueError(f"主感情 '{main_emotion}' に対応する英語名が見つかりません")
 
-        uri = "mongodb+srv://noriyukikondo99:Aa1192296%21@cluster0.oe0tni1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-        client = MongoClient(uri, tlsCAFile=certifi.where())
+        client = get_mongo_client()
+        if client is None:
+            raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+
         db = client["emotion_db"]
         collection = db["emotion_data"]
 
@@ -73,4 +73,3 @@ def divide_and_store(emotion_data: dict) -> str:
         logger.error(f"[ERROR] divide_and_store失敗: {e}")
         print(f"❌ [ERROR] divide_and_store失敗: {e}")
         raise
-
