@@ -6,9 +6,10 @@ from pymongo.errors import ConnectionFailure
 from dotenv import load_dotenv
 import certifi
 import json
+import openai
 
-# 環境変数読み込み（.envファイルから）
-load_dotenv()
+# Renderの環境変数からOpenAIのAPIキーを取得
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ロガー
 logger = logging.getLogger("yumia_logger")
