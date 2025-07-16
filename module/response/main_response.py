@@ -48,7 +48,8 @@ def load_emotion_by_date(path, target_date):
                         print(f"[DEBUG] 履歴一覧: {history_list}")
                         for entry in history_list:
                             print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
-                            if entry.get("date") == target_date:
+                            print(f"[DEBUG] 比較: entry.date={repr(entry.get('date'))} vs target_date={repr(target_date)}")
+                            if str(entry.get("date")) == str(target_date):
                                 print(f"[DEBUG] MongoDB履歴内一致: {entry}")
                                 return entry
 
@@ -78,13 +79,14 @@ def load_emotion_by_date(path, target_date):
 
         if isinstance(data, list):
             for item in reversed(data):
-                if item.get("date") == target_date:
+                if str(item.get("date")) == str(target_date):
                     print(f"[DEBUG] ローカルファイルからの読み込み成功: {item}")
                     return item
 
         elif isinstance(data, dict) and "履歴" in data:
             for item in reversed(data["履歴"]):
-                if item.get("date") == target_date:
+                print(f"[DEBUG] ローカルファイル照合中: item.date={repr(item.get('date'))} vs target_date={repr(target_date)}")
+                if str(item.get("date")) == str(target_date):
                     print(f"[DEBUG] ローカルファイル履歴からの読み込み成功: {item}")
                     return item
     except Exception as e:
