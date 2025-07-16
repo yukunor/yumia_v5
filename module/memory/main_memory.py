@@ -1,11 +1,9 @@
 import os
 import json
 from datetime import datetime
-from pymongo import MongoClient
-import certifi
 from .divide_emotion import divide_and_store
 from .index_emotion import update_emotion_index
-from utils import logger
+from utils import logger, get_mongo_client
 
 ALL_EMOTIONS = [
     "喜び", "期待", "怒り", "嫌悪", "悲しみ", "驚き", "恐れ", "信頼", "楽観", "誇り",
@@ -15,8 +13,9 @@ ALL_EMOTIONS = [
 
 # MongoDB 接続
 print("[STEP 1] MongoDBに接続します...")
-uri = "mongodb+srv://noriyukikondo99:Aa1192296%21@cluster0.oe0tni1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-client = MongoClient(uri, tlsCAFile=certifi.where())
+client = get_mongo_client()
+if client is None:
+    raise ConnectionError("[ERROR] MongoDBクライアントの取得に失敗しました")
 db = client["emotion_db"]
 collection_history = db["emotion_history"]
 collection_samples = db["emotion_samples"]
