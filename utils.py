@@ -136,6 +136,7 @@ def load_system_prompt_cached():
             _cached_system_prompt = f.read().strip()
     return _cached_system_prompt
 
+# 32感情ベクトル → 6感情要約
 def summarize_feeling(feeling_vector: dict) -> dict:
     summary = {
         "喜び": sum(feeling_vector.get(e, 0) for e in ["歓喜", "希望", "信頼", "楽観", "愛"]) / 5,
@@ -152,3 +153,4 @@ def summarize_feeling(feeling_vector: dict) -> dict:
         print(f"  {k}: {v}")
 
     return summary
+
