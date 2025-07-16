@@ -71,6 +71,10 @@ def load_history(limit=100):
             db = client["emotion_db"]
             collection = db["dialogue_history"]
             entries = list(collection.find().sort("timestamp", -1).limit(limit))
+            # ObjectId を文字列に変換
+            for entry in entries:
+                if "_id" in entry:
+                    entry["_id"] = str(entry["_id"])
             return list(reversed(entries))
     except Exception as e:
         logger.error(f"[ERROR] 履歴の読み込みに失敗: {e}")
