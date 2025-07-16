@@ -31,16 +31,15 @@ def load_emotion_by_date(path, target_date):
                 collection = get_mongo_collection(category, emotion_label)
                 print(f"[DEBUG] collection の有無: {collection}")
                 if collection is not None:
-                    # ① 単独レコード形式で存在するか検索
+                    # 単独レコード or dateフィールドでの直接一致検索
                     record = collection.find_one({"date": target_date})
                     if record:
                         print(f"[DEBUG] MongoDB取得結果（単独）: {record}")
                         return record
 
-                    # ② 履歴形式の中から一致するエントリを検索（data.履歴 または直下の履歴）
+                    # 履歴形式（data.履歴 or 直下の履歴）からの検索
                     print("[DEBUG] collection.find({}) 実行")
-                    all_docs = collection.find({})
-                    docs = list(all_docs)
+                    docs = list(collection.find({}))
                     print(f"[DEBUG] 取得ドキュメント数: {len(docs)}")
                     for doc in docs:
                         print(f"[DEBUG] ドキュメント構造確認: {doc}")
@@ -49,20 +48,17 @@ def load_emotion_by_date(path, target_date):
                             history_list = doc["履歴"]
                         elif "data" in doc and "履歴" in doc["data"]:
                             history_list = doc["data"]["履歴"]
-                        print(f"[DEBUG] 履歴一覧: {history_list}")
+
                         for entry in history_list:
                             print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
-                            print(f"[DEBUG] 比較: entry.date={repr(entry.get('date'))} vs target_date={repr(target_date)}")
                             if str(entry.get("date")) == str(target_date):
                                 print(f"[DEBUG] MongoDB履歴内一致: {entry}")
                                 return entry
 
-                    # ③ 最終手段：全レコードのdateを直接比較（型差異含め）
+                    # 最後に全ドキュメントの date を照合
                     print("[DEBUG] 最終確認: 全レコードを直接照合")
                     for doc in docs:
-                        doc_date = doc.get("date")
-                        print(f"[DEBUG] 最終照合: doc.date={doc_date} vs target_date={target_date}")
-                        if str(doc_date) == str(target_date):
+                        if str(doc.get("date")) == str(target_date):
                             print(f"[DEBUG] MongoDB最終一致成功: {doc}")
                             return doc
 
@@ -93,9 +89,11 @@ def load_emotion_by_date(path, target_date):
                 if str(item.get("date")) == str(target_date):
                     print(f"[DEBUG] ローカルファイル履歴からの読み込み成功: {item}")
                     return item
+
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
+
 
 
 
