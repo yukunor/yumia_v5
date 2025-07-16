@@ -2,9 +2,7 @@ import json
 import os
 from datetime import datetime
 from collections import defaultdict, Counter
-from utils import logger  # ロガーのインポート
-from pymongo import MongoClient
-import certifi
+from utils import logger, get_mongo_client  # ロガーとMongo関数のインポート
 
 # === EMOTION_MAPから日本語キーを抽出 ===
 EMOTION_MAP = {
@@ -38,8 +36,10 @@ def normalize_emotion_vector(構成比: dict) -> dict:
 def update_emotion_index(emotion_data, memory_path):
     print("📥 MongoDBへのインデックス保存を開始します...")
     try:
-        uri = "mongodb+srv://noriyukikondo99:Aa1192296%21@cluster0.oe0tni1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-        client = MongoClient(uri, tlsCAFile=certifi.where())
+        client = get_mongo_client()
+        if client is None:
+            raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+
         db = client["emotion_db"]
         collection = db["emotion_index"]
 
