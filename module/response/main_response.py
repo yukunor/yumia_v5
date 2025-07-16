@@ -68,6 +68,7 @@ def load_emotion_by_date(path, target_date):
 
         except Exception as e:
             logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
+            print(f"[DEBUG] 例外発生: {e}")
         return None
 
     try:
