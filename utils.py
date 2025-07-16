@@ -71,7 +71,6 @@ def load_history(limit=100):
             db = client["emotion_db"]
             collection = db["dialogue_history"]
             entries = list(collection.find().sort("timestamp", -1).limit(limit))
-            # ObjectId を文字列に変換
             for entry in entries:
                 if "_id" in entry:
                     entry["_id"] = str(entry["_id"])
@@ -79,6 +78,45 @@ def load_history(limit=100):
     except Exception as e:
         logger.error(f"[ERROR] 履歴の読み込みに失敗: {e}")
         return []
+
+# 現在感情：読み込み
+def load_current_emotion():
+    try:
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["current_emotion"]
+            latest = collection.find_one(sort=[("timestamp", -1)])
+            return latest["emotion_vector"] if latest else {}
+    except Exception as e:
+        logger.error(f"[ERROR] 現在感情の読み込みに失敗: {e}")
+        return {}
+
+# 現在感情：保存
+def save_current_emotion(emotion_vector):
+    try:
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["current_emotion"]
+            entry = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "emotion_vector": emotion_vector
+            }
+            collection.insert_one(entry)
+            logger.info("[INFO] 現在感情をMongoDBに保存しました")
+    except Exception as e:
+        logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")
+
+# 感情ベクトルの合成
+def merge_emotion_vectors(old_vector, new_vector, weight_old=0.7, weight_new=0.3):
+    merged = {}
+    all_keys = set(old_vector.keys()) | set(new_vector.keys())
+    for key in all_keys:
+        old_val = old_vector.get(key, 0.0)
+        new_val = new_vector.get(key, 0.0)
+        merged[key] = round(old_val * weight_old + new_val * weight_new, 4)
+    return merged
 
 # プロンプト読み込み関連
 def load_emotion_prompt():
@@ -97,4 +135,3 @@ def load_system_prompt_cached():
         with open("system_prompt.txt", "r", encoding="utf-8") as f:
             _cached_system_prompt = f.read().strip()
     return _cached_system_prompt
-
