@@ -4,6 +4,11 @@ from datetime import datetime
 import logging
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
+from dotenv import load_dotenv
+import certifi
+
+# 環境変数読み込み（.envファイルから）
+load_dotenv()
 
 # 会話履歴関連
 history_file = "dialogue_history.jsonl"
@@ -53,7 +58,7 @@ if not logger.hasHandlers():
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
-# 🔌 MongoDB接続管理関数（追加部分）
+# 🔌 MongoDB Atlas接続管理関数
 _mongo_client = None
 
 def get_mongo_client():
@@ -66,17 +71,15 @@ def get_mongo_client():
             print("[DEBUG] 既存のMongoClientが失敗 → 再接続")
 
     try:
-        _mongo_client = MongoClient(
-            "mongodb://localhost:27017/",
-            serverSelectionTimeoutMS=1000,
-            connectTimeoutMS=1000,
-            socketTimeoutMS=1000
-        )
+        mongo_uri = os.getenv("MONGODB_URI")
+        if not mongo_uri:
+            raise ValueError("環境変数 'MONGO_URI' が設定されていません")
+
+        _mongo_client = MongoClient(mongo_uri, tlsCAFile=certifi.where())
         _mongo_client.admin.command("ping")
-        print("[DEBUG] MongoDB接続成功")
+        print("[DEBUG] MongoDB Atlas接続成功")
         return _mongo_client
     except Exception as e:
         print(f"[ERROR] MongoDB接続失敗: {e}")
         logger.error(f"[ERROR] MongoDB接続失敗: {e}")
         return None
-
