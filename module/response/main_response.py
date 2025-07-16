@@ -8,10 +8,12 @@ import os
 from pymongo import MongoClient
 from bson import ObjectId  # ← 必ずファイル先頭に追加してください
 
+# 初回のみ接続し、以降は再利用
+client = MongoClient("mongodb://localhost:27017/")
+db = client["emotion_db"]
+
 def get_mongo_collection(category, emotion_label):
     try:
-        client = MongoClient("mongodb://localhost:27017/")
-        db = client["emotion_db"]
         collection_name = f"{category}_{emotion_label}"
         return db[collection_name]
     except Exception as e:
