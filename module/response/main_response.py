@@ -38,42 +38,25 @@ def load_emotion_by_date(path, target_date):
                     print(f"[DEBUG] MongoDB ping失敗: {e}")
                     return None
 
-                collection = get_mongo_collection(category, emotion_label)
-                print(f"[DEBUG] collection の有無: {collection}")
-                if collection is not None:
-                    record = collection.find_one({"date": target_date})
-                    if record:
-                        print(f"[DEBUG] MongoDB取得結果（単独）: {record}")
-                        return record
+                # 旧形式 short_Trust などに誤接続しないよう category/emotion で emotion_data 固定
+                collection = db["emotion_data"]
+                doc = collection.find_one({"category": category, "emotion": emotion_label})
+                print(f"[DEBUG] emotion_data コレクション検索: {doc is not None}")
 
-                    print("[DEBUG] collection.find({}) 実行")
-                    docs = list(collection.find({}))
-                    print(f"[DEBUG] 取得ドキュメント数: {len(docs)}")
-                    for doc in docs:
-                        print(f"[DEBUG] ドキュメント構造確認: {doc}")
-                        history_list = []
-                        if "履歴" in doc:
-                            history_list = doc["履歴"]
-                        elif "data" in doc and "履歴" in doc["data"]:
-                            history_list = doc["data"]["履歴"]
+                if doc and "data" in doc and "履歴" in doc["data"]:
+                    for entry in doc["data"]["履歴"]:
+                        print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
+                        if str(entry.get("date")) == str(target_date):
+                            print(f"[DEBUG] MongoDB履歴内一致: {entry}")
+                            return entry
 
-                        for entry in history_list:
-                            print(f"[DEBUG] 照合中: entry.date={entry.get('date')} vs target_date={target_date}")
-                            if str(entry.get("date")) == str(target_date):
-                                print(f"[DEBUG] MongoDB履歴内一致: {entry}")
-                                return entry
-
-                    print("[DEBUG] 最終確認: 全レコードを直接照合")
-                    for doc in docs:
-                        if str(doc.get("date")) == str(target_date):
-                            print(f"[DEBUG] MongoDB最終一致成功: {doc}")
-                            return doc
-
+                print("[DEBUG] 該当データが見つかりませんでした")
         except Exception as e:
             logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
             print(f"[DEBUG] 例外発生: {e}")
         return None
 
+    # ローカルファイルパス対応
     try:
         if not os.path.exists(path):
             logger.warning(f"[WARNING] 指定されたパスが存在しません: {path}")
@@ -100,7 +83,6 @@ def load_emotion_by_date(path, target_date):
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
-
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
