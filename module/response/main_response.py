@@ -37,6 +37,7 @@ def load_emotion_by_date(path, target_date):
                     print("[DEBUG] MongoDB ping成功: 接続は有効")
                 except Exception as e:
                     print(f"[DEBUG] MongoDB ping失敗: {e}")
+                    return None
 
                 collection = get_mongo_collection(category, emotion_label)
                 print(f"[DEBUG] collection の有無: {collection}")
@@ -103,6 +104,7 @@ def load_emotion_by_date(path, target_date):
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
+
 
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
