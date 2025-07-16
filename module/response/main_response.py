@@ -93,7 +93,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         print("✎ステップ①: 感情推定 開始")
-        raw_response, initial_emotion = estimate_emotion(user_input)
+        raw_response, initial_emotion = estimate_emotion(user_input, current_emotion=current_feeling)
         summary_str = ", ".join([f"{k}:{v}%" for k, v in initial_emotion.get("構成比", {}).items()])
         print(f"💫推定応答内容（raw）: {raw_response}")
         print(f"💞構成比（主感情: {initial_emotion.get('主感情', '未定義')}）: (構成比: {summary_str})")
