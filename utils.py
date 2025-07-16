@@ -1,4 +1,3 @@
-import jsonlines
 import os
 from datetime import datetime
 import logging
@@ -6,48 +5,10 @@ from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from dotenv import load_dotenv
 import certifi
+import json
 
 # 環境変数読み込み（.envファイルから）
 load_dotenv()
-
-# 会話履歴関連
-history_file = "dialogue_history.jsonl"
-
-def append_history(role, message):
-    entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "role": role,
-        "message": message
-    }
-    with jsonlines.open(history_file, mode='a') as writer:
-        writer.write(entry)
-
-def load_history():
-    if not os.path.exists(history_file):
-        return []
-    with jsonlines.open(history_file, "r") as reader:
-        return list(reader)
-
-# プロンプト読み込み関連
-def load_emotion_prompt():
-    """感情推定用プロンプトは毎回読み込む"""
-    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-def load_dialogue_prompt():
-    """応答生成用プロンプトは毎回読み込む"""
-    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-_cached_system_prompt = None
-
-def load_system_prompt_cached():
-    """システムプロンプトは一度だけ読み込む（キャッシュ）"""
-    global _cached_system_prompt
-    if _cached_system_prompt is None:
-        with open("system_prompt.txt", "r", encoding="utf-8") as f:
-            _cached_system_prompt = f.read().strip()
-    return _cached_system_prompt
 
 # ロガー
 logger = logging.getLogger("yumia_logger")
@@ -73,7 +34,7 @@ def get_mongo_client():
     try:
         mongo_uri = os.getenv("MONGODB_URI")
         if not mongo_uri:
-            raise ValueError("環境変数 'MONGO_URI' が設定されていません")
+            raise ValueError("環境変数 'MONGODB_URI' が設定されていません")
 
         _mongo_client = MongoClient(mongo_uri, tlsCAFile=certifi.where())
         _mongo_client.admin.command("ping")
@@ -83,3 +44,52 @@ def get_mongo_client():
         print(f"[ERROR] MongoDB接続失敗: {e}")
         logger.error(f"[ERROR] MongoDB接続失敗: {e}")
         return None
+
+# 会話履歴：保存
+def append_history(role, message):
+    try:
+        entry = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "role": role,
+            "message": message
+        }
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["dialogue_history"]
+            collection.insert_one(entry)
+            logger.info(f"[INFO] 履歴をMongoDBに保存: {entry}")
+    except Exception as e:
+        logger.error(f"[ERROR] 履歴保存に失敗: {e}")
+
+# 会話履歴：読み込み
+def load_history(limit=100):
+    try:
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["dialogue_history"]
+            entries = list(collection.find().sort("timestamp", -1).limit(limit))
+            return list(reversed(entries))
+    except Exception as e:
+        logger.error(f"[ERROR] 履歴の読み込みに失敗: {e}")
+        return []
+
+# プロンプト読み込み関連
+def load_emotion_prompt():
+    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def load_dialogue_prompt():
+    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+_cached_system_prompt = None
+
+def load_system_prompt_cached():
+    global _cached_system_prompt
+    if _cached_system_prompt is None:
+        with open("system_prompt.txt", "r", encoding="utf-8") as f:
+            _cached_system_prompt = f.read().strip()
+    return _cached_system_prompt
+
