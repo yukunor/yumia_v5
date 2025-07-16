@@ -6,6 +6,7 @@ from module.memory.emotion_stats import synthesize_current_emotion
 import json
 import os
 from bson import ObjectId
+from utils import summarize_feeling
 
 client = get_mongo_client()
 if client is None:
