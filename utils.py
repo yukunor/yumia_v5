@@ -135,3 +135,14 @@ def load_system_prompt_cached():
         with open("system_prompt.txt", "r", encoding="utf-8") as f:
             _cached_system_prompt = f.read().strip()
     return _cached_system_prompt
+
+def summarize_feeling(feeling_vector: dict) -> dict:
+    summary = {
+        "喜び": sum(feeling_vector.get(e, 0) for e in ["歓喜", "希望", "信頼", "楽観", "愛"]) / 5,
+        "怒り": sum(feeling_vector.get(e, 0) for e in ["憤慨", "軽蔑", "怒り"]) / 3,
+        "悲しみ": sum(feeling_vector.get(e, 0) for e in ["絶望", "自責", "恥", "感傷"]) / 4,
+        "楽しさ": sum(feeling_vector.get(e, 0) for e in ["好奇心", "期待", "喜び"]) / 3,
+        "自信": sum(feeling_vector.get(e, 0) for e in ["優位", "誇り"]) / 2,
+        "困惑": sum(feeling_vector.get(e, 0) for e in ["恐れ", "不信", "不安"]) / 3,
+    }
+    return {k: round(v, 2) for k, v in summary.items()}
