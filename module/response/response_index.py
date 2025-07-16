@@ -1,17 +1,16 @@
 import json
 import os
 import re
-from pymongo import MongoClient
-import certifi
-from utils import logger  # 共通ロガーをインポート
+from utils import logger, get_mongo_client  # 共通ロガーとMongoDBクライアントをインポート
 from bson import ObjectId
 
 # MongoDB から index データを取得
 def load_index():
     print("\U0001F4E5 [STEP] MongoDBからemotion_indexを取得します...")
     try:
-        uri = "mongodb+srv://noriyukikondo99:Aa1192296%21@cluster0.oe0tni1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-        client = MongoClient(uri, tlsCAFile=certifi.where())
+        client = get_mongo_client()
+        if client is None:
+            raise ConnectionError("MongoDBクライアントの取得に失敗しました")
         db = client["emotion_db"]
         collection = db["emotion_index"]
         data = list(collection.find({}))
@@ -63,7 +62,6 @@ def find_best_match_by_composition(current_composition, candidates):
     print(f"\U0001F50E 構成比マッチング対象数: {len(candidates)}")
 
     def is_valid_candidate(candidate_comp, base_comp):
-        # ノイズ除去（5以下は無視）
         base_filtered = {k: v for k, v in base_comp.items() if v > 5}
         cand_filtered = {k: v for k, v in candidate_comp.items() if v > 5}
 
@@ -109,7 +107,6 @@ def extract_best_reference(current_emotion, index_data, category):
     if best_match:
         print(f"✅ {category}カテゴリ: ベストマッチが見つかりました")
 
-        # 保存先が無ければ補完する
         save_path = best_match.get("保存先")
         if not save_path:
             save_path = f"mongo/{category}/{best_match.get('emotion', 'Unknown')}"
@@ -122,7 +119,6 @@ def extract_best_reference(current_emotion, index_data, category):
             "date": best_match.get("date")
         }
 
-        # ObjectIdを文字列に変換してから表示
         def convert_objectid(obj):
             if isinstance(obj, ObjectId):
                 return str(obj)
@@ -133,3 +129,4 @@ def extract_best_reference(current_emotion, index_data, category):
 
     print(f"\U0001F7E5 {category}カテゴリ: 一致はあるが構成比が合致しない")
     return None
+
