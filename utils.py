@@ -145,4 +145,10 @@ def summarize_feeling(feeling_vector: dict) -> dict:
         "自信": sum(feeling_vector.get(e, 0) for e in ["優位", "誇り"]) / 2,
         "困惑": sum(feeling_vector.get(e, 0) for e in ["恐れ", "不信", "不安"]) / 3,
     }
-    return {k: round(v, 2) for k, v in summary.items()}
+    summary = {k: round(v, 2) for k, v in summary.items()}
+
+    print("【6感情サマリー】")
+    for k, v in summary.items():
+        print(f"  {k}: {v}")
+
+    return summary
