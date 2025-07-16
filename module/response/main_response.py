@@ -29,6 +29,7 @@ def load_emotion_by_date(path, target_date):
                 _, category, emotion_label = parts
                 print(f"[DEBUG] MongoDBクエリ: category={category}, label={emotion_label}, date={target_date}")
                 collection = get_mongo_collection(category, emotion_label)
+                print(f"[DEBUG] collection の有無: {collection}")
                 if collection:
                     # ① 単独レコード形式で存在するか検索
                     record = collection.find_one({"date": target_date})
