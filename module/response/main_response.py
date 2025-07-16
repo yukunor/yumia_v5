@@ -99,6 +99,7 @@ def load_emotion_by_date(path, target_date):
 
 
 
+
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
