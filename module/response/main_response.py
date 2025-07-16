@@ -1,6 +1,6 @@
 from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
 from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
-from utils import logger, get_mongo_client
+from utils import logger, get_mongo_client, load_current_emotion, save_current_emotion, merge_emotion_vectors
 from module.memory.main_memory import handle_emotion, save_emotion_sample, append_emotion_history, pad_emotion_vector
 from module.memory.emotion_stats import synthesize_current_emotion
 import json
@@ -38,7 +38,6 @@ def load_emotion_by_date(path, target_date):
                     print(f"[DEBUG] MongoDB ping失敗: {e}")
                     return None
 
-                # 旧形式 short_Trust などに誤接続しないよう category/emotion で emotion_data 固定
                 collection = db["emotion_data"]
                 doc = collection.find_one({"category": category, "emotion": emotion_label})
                 print(f"[DEBUG] emotion_data コレクション検索: {doc is not None}")
@@ -56,7 +55,6 @@ def load_emotion_by_date(path, target_date):
             print(f"[DEBUG] 例外発生: {e}")
         return None
 
-    # ローカルファイルパス対応
     try:
         if not os.path.exists(path):
             logger.warning(f"[WARNING] 指定されたパスが存在しません: {path}")
@@ -83,17 +81,15 @@ def load_emotion_by_date(path, target_date):
     except Exception as e:
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
+
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
     best_match = None
 
-    print("[DEBUG] 現在の気分を合成中...")
-    current_feeling_data = synthesize_current_emotion()
-    current_feeling = current_feeling_data.get("現在の気分", {})
-    long_base_emotion = current_feeling_data.get("主感情", "未定義")
-    print(f"[DEBUG] 合成された現在の気分: {current_feeling}")
-    print(f"[DEBUG] 合成された主感情: {long_base_emotion}")
+    print("[DEBUG] 現在の気分を取得中...")
+    current_feeling = load_current_emotion()
+    print(f"[DEBUG] 現在の気分ベクトル: {current_feeling}")
 
     try:
         print("✎ステップ①: 感情推定 開始")
@@ -118,24 +114,18 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ③: キーワード一致＆構成比類似 抽出 開始")
         for category in ["short", "intermediate", "long"]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
-            print(f"[DEBUG] refer ({category}): {refer}")
             if refer:
                 emotion_data = refer.get("emotion", {})
                 path = refer.get("保存先")
                 date = refer.get("date")
-                print(f"[DEBUG] path: {path}, date: {date}")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
-                print(f"[DEBUG] load_emotion_by_date 結果: {full_emotion}")
                 if full_emotion:
                     reference_emotions.append({
                         "emotion": full_emotion,
                         "source": refer.get("source"),
                         "match_info": refer.get("match_info", "")
                     })
-        print(f"📌 キーワード一致による参照感情件数: {len(reference_emotions)}件")
-
         best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
-        print(f"[DEBUG] 最終的なベストマッチ: {best_match}")
 
         if best_match is None:
             print("✎ステップ④: 一致なし → 仮応答を使用")
@@ -146,11 +136,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             context = [best_match]
             context.append({
                 "emotion": {
-                    "人格基盤（long_base_emotion）": long_base_emotion,
                     "現在の気分": current_feeling
                 },
                 "source": "現在の気分合成データ",
-                "match_info": "人格基盤と現在の気分のプロンプト挿入用"
+                "match_info": "現在の気分のプロンプト挿入用"
             })
             final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, context)
 
@@ -161,19 +150,6 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     try:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
         print(f"💬 最終応答内容（再掲）:\n💭{final_response.strip()}")
-        main_emotion = response_emotion.get('主感情', '未定義')
-        final_summary = ", ".join([f"{k}:{v}%" for k, v in response_emotion.get("構成比", {}).items()])
-        print(f"💞構成比（主感情: {main_emotion}）: {final_summary}")
-
-        if best_match:
-            print("📌 参照感情データ:")
-            for idx, emo_entry in enumerate(reference_emotions, start=1):
-                emo = emo_entry["emotion"]
-                ratio = emo.get("構成比", {})
-                summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
-                print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{emo_entry.get('match_info', '')}｜{emo_entry.get('source', '不明')}）")
-        else:
-            print("📌 参照感情データ: 参照なし")
 
         response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
@@ -181,6 +157,10 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         padded_ratio = pad_emotion_vector(response_emotion.get("構成比", {}))
         response_emotion["構成比"] = padded_ratio
         append_emotion_history(response_emotion)
+
+        # 現在の感情と応答感情を合成し保存
+        merged = merge_emotion_vectors(current_feeling, response_emotion.get("構成比", {}))
+        save_current_emotion(merged)
 
         return final_response, response_emotion
     except Exception as e:
