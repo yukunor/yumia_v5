@@ -108,15 +108,31 @@ def save_current_emotion(emotion_vector):
     except Exception as e:
         logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")
 
-# 感情ベクトルの合成
-def merge_emotion_vectors(old_vector, new_vector, weight_old=0.7, weight_new=0.3):
-    merged = {}
-    all_keys = set(old_vector.keys()) | set(new_vector.keys())
+# 感情ベクトルの合成（加重平均 + 減衰 + 正規化）
+def merge_emotion_vectors(
+    current: dict,
+    new: dict,
+    weight_new: float = 0.3,
+    decay_factor: float = 0.9,
+    normalize: bool = True
+) -> dict:
+    combined = {}
+    all_keys = set(current.keys()) | set(new.keys())
     for key in all_keys:
-        old_val = old_vector.get(key, 0.0)
-        new_val = new_vector.get(key, 0.0)
-        merged[key] = round(old_val * weight_old + new_val * weight_new, 4)
-    return merged
+        old_val = current.get(key, 0)
+        new_val = new.get(key, 0)
+        if key in new:
+            merged = (1 - weight_new) * old_val + weight_new * new_val
+        else:
+            merged = old_val * decay_factor
+        combined[key] = merged
+
+    if normalize:
+        total = sum(combined.values())
+        if total > 0:
+            combined = {k: round((v / total) * 100, 2) for k, v in combined.items()}
+
+    return combined
 
 # プロンプト読み込み関連
 def load_emotion_prompt():
