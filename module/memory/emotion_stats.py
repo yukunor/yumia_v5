@@ -32,15 +32,13 @@ def get_top_long_emotions():
         counter = Counter()
 
         for doc in long_docs:
-            emotion = doc.get("emotion", "Unknown").strip()
+            emotion_en = doc.get("emotion", "Unknown").strip()
+            emotion_jp = emotion_map.get(emotion_en, emotion_en)
             history_list = doc.get("履歴", [])
-            print(f"[DEBUG] doc.emotion: {emotion}, 履歴数: {len(history_list)}")
-            count = len(history_list)
-            counter[emotion] += count
+            print(f"[DEBUG] doc.emotion: {emotion_en} → {emotion_jp}, 履歴数: {len(history_list)}")
+            counter[emotion_jp] += len(history_list)
 
-        top_emotions = counter.most_common(4)
-        translated = [(emotion_map.get(e, e), count) for e, count in top_emotions]
-        return translated
+        return counter.most_common(4)
 
     except Exception as e:
         logger.error(f"[ERROR] MongoDBからlongカテゴリ感情の取得に失敗: {e}")
