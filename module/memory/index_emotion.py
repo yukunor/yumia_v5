@@ -80,7 +80,9 @@ def extract_personality_tendency() -> dict:
         docs = collection.find({"category": "long"})
         count = 0
 
-        for doc in docs:
+        for idx, doc in enumerate(docs):
+            print(f"[DEBUG] doc {idx + 1} を処理中: emotion = {doc.get('emotion', '未定義')}")
+
             # ドキュメント直下のemotionフィールドもカウント対象にする
             top_emotion = doc.get("emotion")
             if top_emotion:
@@ -89,6 +91,10 @@ def extract_personality_tendency() -> dict:
 
             # data.履歴 の中身から主感情を集計
             history_list = doc.get("data", {}).get("履歴", [])
+            if not isinstance(history_list, list):
+                print(f"[ERROR] 履歴がlist型でない: type={type(history_list)} → doc_id={doc.get('_id')}")
+                continue
+
             print(f"[DEBUG] 履歴数: {len(history_list)}")
             for entry in history_list:
                 main_emotion = entry.get("主感情")
