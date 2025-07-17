@@ -1,5 +1,6 @@
 import os
 import pymongo
+from bson.objectid import ObjectId
 
 # MongoDB接続設定
 MONGO_URL = os.environ.get("MONGODB_URI")
@@ -31,13 +32,11 @@ for doc in docs:
         new_data = {"履歴": data}
         new_doc = doc.copy()
         new_doc["data"] = new_data
+        new_doc["_id"] = ObjectId()  # 新しいIDを割り振る
 
         try:
             insert_result = collection.insert_one(new_doc)
-            if insert_result.inserted_id:
-                print(f"[完了] {_id} → 新ID: {insert_result.inserted_id} に移行完了（削除せず残す）")
-            else:
-                print(f"[失敗] {_id} の挿入に失敗しました")
+            print(f"[完了] {_id} → 新ID: {insert_result.inserted_id} に移行完了")
 
         except Exception as e:
             print(f"[ERROR] {_id} | 例外発生: {e}")
