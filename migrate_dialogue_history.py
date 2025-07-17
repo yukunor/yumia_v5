@@ -1,30 +1,48 @@
-from utils import get_mongo_client
+import os
+import pymongo
 
-# Atlas用MongoDBクライアント取得（utils経由）
-client = get_mongo_client()
-db = client["your_db_name"]
-collection = db["your_collection_name"]
+# 環境変数から MongoDB URI を取得
+MONGO_URL = os.environ.get("MONGODB_URI")
+if not MONGO_URL:
+    raise EnvironmentError("環境変数 'MONGODB_URI' が設定されていません")
 
-# longカテゴリを全走査し、dataがlistのものを修正
-docs = collection.find({"category": "long"})
+# データベースとコレクション名（必要に応じて修正）
+DB_NAME = "your_database_name"  # ←適宜変更
+COLLECTION_NAME = "emotion_data"
+
+# MongoDB Atlas接続
+client = pymongo.MongoClient(MONGO_URL)
+db = client[DB_NAME]
+collection = db[COLLECTION_NAME]
+print("[DEBUG] MongoDB Atlas接続成功")
+
+# 修正対象ドキュメントを取得
+docs = list(collection.find({"category": "long"}))
 
 for doc in docs:
-    _id = doc["_id"]
-    data_field = doc.get("data")
+    _id = doc.get("_id")
+    emotion = doc.get("emotion")
+    data = doc.get("data")
 
-    if isinstance(data_field, list):
-        print(f"[修正対象] emotion: {doc.get('emotion')}")
+    if isinstance(data, list):
+        print(f"[対象] _id: {_id} | emotion: {emotion} | data形式: list")
 
-        # 正常な構造に修正
-        new_data = {"履歴": data_field}
+        # データ変換
+        new_data = {"履歴": data}
+        new_doc = doc.copy()
+        new_doc["data"] = new_data
 
-        # 上書き（旧データの削除含む）
-        result = collection.update_one(
-            {"_id": _id},
-            {"$set": {"data": new_data}}
-        )
+        try:
+            # 挿入と削除
+            insert_result = collection.insert_one(new_doc)
+            if insert_result.inserted_id:
+                collection.delete_one({"_id": _id})
+                print(f"[完了] 修正して削除済み: {_id} → 新ID: {insert_result.inserted_id}")
+            else:
+                print(f"[失敗] 挿入できませんでした: {_id}")
 
-        if result.modified_count > 0:
-            print(f"✅ 修正完了: {_id}")
-        else:
-            print(f"⚠️ 修正失敗または不要: {_id}")
+        except Exception as e:
+            print(f"[ERROR] {_id} | 例外: {e}")
+
+    else:
+        print(f"[スキップ] _id: {_id} | emotion: {emotion} | data型: {type(data)}")
