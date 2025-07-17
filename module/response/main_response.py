@@ -83,6 +83,8 @@ def load_emotion_by_date(path, target_date):
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
 
+from utils import summarize_feeling
+
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
@@ -165,7 +167,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         raise
 
     try:
-        print("✎ステップ⑤: 応答のサニタイズ 完了")
+        print("✎ステップ⑥: 応答のサニタイズ 完了")
         print(f"💬 最終応答内容（再掲）:\n💭{final_response.strip()}")
         reference_data = best_match if isinstance(best_match, dict) else {"構成比": {}, "source": "不明", "date": "不明"}
         print(f"[INFO] 応答に使用した感情データ: source={reference_data.get('source')}, date={reference_data.get('date')}, 主感情={reference_data.get('主感情')}")
@@ -184,3 +186,4 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
+
