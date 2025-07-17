@@ -83,8 +83,6 @@ def load_emotion_by_date(path, target_date):
         logger.error(f"[ERROR] 感情データの読み込み失敗: {e}")
     return None
 
-from utils import summarize_feeling
-
 def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     initial_emotion = {}
     reference_emotions = []
