@@ -2,9 +2,8 @@ import json
 import os
 from datetime import datetime
 from collections import defaultdict, Counter
-from utils import logger, get_mongo_client  # ロガーとMongo関数のインポート
+from utils import logger, get_mongo_client
 
-# === EMOTION_MAPから日本語キーを抽出 ===
 EMOTION_MAP = {
     "喜び": "Joy", "期待": "Anticipation", "怒り": "Anger", "嫌悪": "Disgust",
     "悲しみ": "Sadness", "驚き": "Surprise", "恐れ": "Fear", "信頼": "Trust",
@@ -16,10 +15,8 @@ EMOTION_MAP = {
     "不安": "Anxiety", "愛": "Love", "希望": "Hope", "優位": "Dominance"
 }
 
-# 全感情語を固定順で抽出（日本語）
 EMOTION_KEYS = list(EMOTION_MAP.keys())
 
-# === 感情カテゴリ分類 ===
 def get_memory_category(weight):
     if weight >= 95:
         return "long"
@@ -28,13 +25,10 @@ def get_memory_category(weight):
     else:
         return "short"
 
-# === 構成比を固定順・0補完で正規化 ===
 def normalize_emotion_vector(構成比: dict) -> dict:
-    return {emotion: 構成比.get(emotion, 0) for emotion in EMOTION_KEYS}
+    return {emotion:構成比.get(emotion, 0) for emotion in EMOTION_KEYS}
 
-# === MongoDBへのインデックス保存 ===
 def update_emotion_index(emotion_data, memory_path):
-    print("📥 MongoDBへのインデックス保存を開始します...")
     try:
         client = get_mongo_client()
         if client is None:
@@ -53,25 +47,16 @@ def update_emotion_index(emotion_data, memory_path):
             "保存先": memory_path
         }
 
-        print(f"[DEBUG] インデックスに追加する内容: {index_entry}")
         collection.insert_one(index_entry)
-        print(f"[✅] MongoDBにemotion_indexを登録しました: {index_entry['date']}")
         logger.info(f"[MongoDB] emotion_index に登録: {index_entry['date']}")
     except Exception as e:
-        print(f"[❌] MongoDB登録エラー: {e}")
         logger.error(f"[ERROR] MongoDB登録失敗: {e}")
 
 def extract_personality_tendency() -> dict:
-    """
-    MongoDBのlongカテゴリから履歴の主感情を集計し、人格傾向（上位4つ）を抽出する。
-    """
     emotion_counter = Counter()
     try:
         client = get_mongo_client()
         db = client["emotion_db"]
-        print("📡 MongoDBクライアント接続完了 → longカテゴリを走査")
-
-        # long_〜 の全コレクションを対象にする
         collection_names = db.list_collection_names()
         long_collections = [name for name in collection_names if name.startswith("long_")]
 
@@ -80,7 +65,6 @@ def extract_personality_tendency() -> dict:
             docs = list(collection.find({}))
 
             for doc in docs:
-                # フィールド構造に応じて履歴を抽出
                 history_list = []
                 if "履歴" in doc:
                     history_list = doc["履歴"]
@@ -92,12 +76,9 @@ def extract_personality_tendency() -> dict:
                     if main_emotion:
                         emotion_counter[main_emotion] += 1
 
-        print("📊 現在の人格傾向（long保存データの主感情カウント）:")
-        for emotion, count in emotion_counter.most_common():
-            print(f"  - {emotion}: {count}件")
-
         return dict(emotion_counter.most_common(4))
 
     except Exception as e:
         logger.error(f"[ERROR] 人格傾向データ抽出失敗: {e}")
         return {}
+
