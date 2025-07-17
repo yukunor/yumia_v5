@@ -28,6 +28,7 @@ def get_top_long_emotions():
         db = client["emotion_db"]
         collection = db["emotion_index"]
 
+        print("📡 MongoDBクライアント接続完了 → longカテゴリを走査")
         long_docs = collection.find({"category": "long"})
         counter = Counter()
 
@@ -41,8 +42,9 @@ def get_top_long_emotions():
 
         total = sum(counter.values())
         print(f"[DEBUG] 主感情カウント合計: {total} 件")
-
-        return counter.most_common(4)
+        top4 = counter.most_common(4)
+        print("🧭 現在人格傾向:", dict(top4))
+        return top4
 
     except Exception as e:
         logger.error(f"[ERROR] MongoDBからlongカテゴリ感情の取得に失敗: {e}")
