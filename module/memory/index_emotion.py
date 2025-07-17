@@ -86,12 +86,13 @@ def extract_personality_tendency() -> dict:
             for entry in history_list:
                 main_emotion = entry.get("主感情")
                 if main_emotion:
-                    print(f"[DEBUG] 抽出された主感情: {main_emotion}")  # デバッグ出力
                     emotion_counter[main_emotion] += 1
                     count += 1
 
         if count == 0:
             print("⚠️ 主感情が1件も抽出されませんでした")
+
+        print(f"[DEBUG] 主感情ごとの出現数: {dict(emotion_counter)}")
 
         print("📊 現在の人格傾向（long保存データの主感情カウント）:")
         for emotion, cnt in emotion_counter.most_common():
