@@ -63,34 +63,28 @@ def update_emotion_index(emotion_data, memory_path):
 
 def extract_personality_tendency() -> dict:
     """
-    MongoDBのlongカテゴリから履歴の主感情を集計し、人格傾向（上位4つ）を抽出する。
+    MongoDBのemotion_dataコレクションから、
+    categoryがlongの履歴を取得し、主感情を集計して人格傾向を抽出する。
     """
     emotion_counter = Counter()
     try:
         client = get_mongo_client()
+        if not client:
+            raise ConnectionError("MongoDB接続失敗")
         db = client["emotion_db"]
+        collection = db["emotion_data"]
+
         print("📡 MongoDBクライアント接続完了 → longカテゴリを走査")
 
-        # long_〜 の全コレクションを対象にする
-        collection_names = db.list_collection_names()
-        long_collections = [name for name in collection_names if name.startswith("long_")]
+        # longカテゴリのデータを検索
+        docs = collection.find({"category": "long"})
 
-        for col_name in long_collections:
-            collection = db[col_name]
-            docs = list(collection.find({}))
-
-            for doc in docs:
-                # フィールド構造に応じて履歴を抽出
-                history_list = []
-                if "履歴" in doc:
-                    history_list = doc["履歴"]
-                elif "data" in doc and "履歴" in doc["data"]:
-                    history_list = doc["data"]["履歴"]
-
-                for entry in history_list:
-                    main_emotion = entry.get("主感情")
-                    if main_emotion:
-                        emotion_counter[main_emotion] += 1
+        for doc in docs:
+            history_list = doc.get("data", {}).get("履歴", [])
+            for entry in history_list:
+                main_emotion = entry.get("主感情")
+                if main_emotion:
+                    emotion_counter[main_emotion] += 1
 
         print("📊 現在の人格傾向（long保存データの主感情カウント）:")
         for emotion, count in emotion_counter.most_common():
