@@ -117,7 +117,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             refer = extract_best_reference(initial_emotion, categorized.get(category, []), category)
             if refer:
                 emotion_data = refer.get("emotion", {})
-                path = refer.get("\u4fdd\u5b58\u5148")
+                path = refer.get("保存先")
                 date = refer.get("date")
                 full_emotion = load_emotion_by_date(path, date) if path and date else None
                 if full_emotion:
@@ -126,16 +126,16 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                         "source": refer.get("source"),
                         "match_info": refer.get("match_info", "")
                     })
-        best_match = find_best_match_by_composition(initial_emotion["\u69cb\u6210\u6bd4"], [r["emotion"] for r in reference_emotions])
+        best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
 
         if best_match:
             print("📌 参照感情データ:")
             for idx, emo_entry in enumerate(reference_emotions, start=1):
                 emo = emo_entry["emotion"]
-                ratio = emo.get("\u69cb\u6210\u6bd4", {})
+                ratio = emo.get("構成比", {})
                 summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
                 match_info = emo_entry.get("match_info", "")
-                source = emo_entry.get("source", "\u4e0d\u660e")
+                source = emo_entry.get("source", "不明")
                 print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}｜{source}）")
         else:
             print("📌 参照感情データ: 参照なし")
@@ -149,13 +149,13 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
             context = [best_match]
             context.append({
                 "emotion": {
-                    "\u73fe\u5728\u306e\u6c17\u5206": current_feeling
+                    "現在の気分": current_feeling
                 },
-                "source": "\u73fe\u5728\u306e\u6c17\u5206\u5408\u6210\u30c7\u30fc\u30bf",
-                "match_info": "\u73fe\u5728\u306e\u6c17\u5206\u306e\u30d7\u30ed\u30f3\u30d7\u30c8\u633f\u5165\u7528"
+                "source": "現在の気分合成データ",
+                "match_info": "現在の気分のプロンプト挿入用"
             })
 
-            summary = summarize_feeling(best_match.get("emotion", {}).get("\u69cb\u6210\u6bd4", {}))
+            summary = summarize_feeling(best_match.get("構成比", {}))
             print(f"💞参照感情6感情サマリー: {summary}")
 
             final_response, response_emotion = generate_emotion_from_prompt_with_context(user_input, context)
@@ -167,18 +167,17 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     try:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
         print(f"💬 最終応答内容（再掲）:\n💭{final_response.strip()}")
-        reference_data = best_match or {"emotion": {}, "source": "\u4e0d\u660e", "date": "\u4e0d\u660e"}
-        print(f"[INFO] 応答に使用した感情データ: source={reference_data.get('source')}, date={reference_data.get('date')}, 主感情={reference_data.get('emotion', {}).get('主感情')}")
+        reference_data = best_match if isinstance(best_match, dict) else {"構成比": {}, "source": "不明", "date": "不明"}
+        print(f"[INFO] 応答に使用した感情データ: source={reference_data.get('source')}, date={reference_data.get('date')}, 主感情={reference_data.get('主感情')}")
 
-
-        response_emotion["emotion_vector"] = response_emotion.get("\u69cb\u6210\u6bd4", {})
+        response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
 
-        padded_ratio = pad_emotion_vector(response_emotion.get("\u69cb\u6210\u6bd4", {}))
-        response_emotion["\u69cb\u6210\u6bd4"] = padded_ratio
+        padded_ratio = pad_emotion_vector(response_emotion.get("構成比", {}))
+        response_emotion["構成比"] = padded_ratio
         append_emotion_history(response_emotion)
 
-        merged = merge_emotion_vectors(current_feeling, response_emotion.get("\u69cb\u6210\u6bd4", {}))
+        merged = merge_emotion_vectors(current_feeling, response_emotion.get("構成比", {}))
         save_current_emotion(merged)
 
         return final_response, response_emotion
