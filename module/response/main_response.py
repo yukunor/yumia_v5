@@ -128,6 +128,18 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
                     })
         best_match = find_best_match_by_composition(initial_emotion["構成比"], [r["emotion"] for r in reference_emotions])
 
+        if best_match:
+            print("📌 参照感情データ:")
+            for idx, emo_entry in enumerate(reference_emotions, start=1):
+                emo = emo_entry["emotion"]
+                ratio = emo.get("構成比", {})
+                summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
+                match_info = emo_entry.get("match_info", "")
+                source = emo_entry.get("source", "不明")
+                print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{match_info}｜{source}）")
+        else:
+            print("📌 参照感情データ: 参照なし")
+
         if best_match is None:
             print("✎ステップ④: 一致なし → 仮応答を使用")
             final_response = raw_response
@@ -157,8 +169,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         print("✎ステップ⑤: 応答のサニタイズ 完了")
         print(f"💬 最終応答内容（再掲）:\n💭{final_response.strip()}")
         reference_data = best_match or {"emotion": {}, "source": "不明", "date": "不明"}
-        print(f"[INFO] 応答に使用した感情データ: source={best_match.get('source')}, date={best_match.get('date')}, 主感情={best_match.get('emotion', {}).get('主感情')}")
-
+        print(f"[INFO] 応答に使用した感情データ: source={reference_data.get('source')}, date={reference_data.get('date')}, 主感情={reference_data['emotion'].get('主感情')}")
 
         response_emotion["emotion_vector"] = response_emotion.get("構成比", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
@@ -174,4 +185,3 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 最終応答ログ出力中にエラー発生: {e}")
         raise
-
