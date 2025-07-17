@@ -145,6 +145,16 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         logger.error(f"[ERROR] GPT応答生成中にエラー発生: {e}")
         raise
 
+        if best_match:
+            print("📌 参照感情データ:")
+            for idx, emo_entry in enumerate(reference_emotions, start=1):
+                emo = emo_entry["emotion"]
+                ratio = emo.get("構成比", {})
+                summary_str = ", ".join([f"{k}:{v}%" for k, v in ratio.items()])
+                print(f"  [{idx}] {summary_str} | 状況: {emo.get('状況', '')} | キーワード: {', '.join(emo.get('keywords', []))}（{emo_entry.get('match_info', '')}｜{emo_entry.get('source', '不明')}）")
+        else:
+            print("📌 参照感情データ: 参照なし")
+
     try:
         reference_data = best_match if isinstance(best_match, dict) else {"構成比": {}, "source": "不明", "date": "不明"}
 
