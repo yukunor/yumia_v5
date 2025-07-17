@@ -5,7 +5,7 @@ MONGO_URL = os.environ.get("MONGODB_URI")
 if not MONGO_URL:
     raise EnvironmentError("環境変数 'MONGODB_URI' が設定されていません")
 
-DB_NAME = "your_database_name"  # ← 実際のデータベース名に変更
+DB_NAME = "emotion_db"  # ← 実際のデータベース名に変更
 COLLECTION_NAME = "emotion_data"
 
 client = pymongo.MongoClient(MONGO_URL)
