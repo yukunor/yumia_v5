@@ -32,7 +32,7 @@ def get_top_long_emotions():
         counter = Counter()
 
         for doc in long_docs:
-            emotion = doc.get("emotion", "Unknown")
+            emotion = doc.get("emotion", "Unknown").strip()
             history_list = doc.get("履歴", [])
             print(f"[DEBUG] doc.emotion: {emotion}, 履歴数: {len(history_list)}")
             count = len(history_list)
@@ -128,3 +128,4 @@ if __name__ == "__main__":
     if debug:
         print("📊 上位主感情（longカテゴリ）:", get_top_long_emotions())
         synthesize_current_emotion()
+
