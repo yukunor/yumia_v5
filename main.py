@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
+# モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 
 from utils import append_history, load_history
@@ -14,8 +15,7 @@ from module.response.main_response import run_response_pipeline
 import module.memory.main_memory as memory
 from utils import logger
 from llm_client import extract_emotion_summary
-from emotion.emotion_stats import extract_personality_tendency
-  # ← 追加
+from module.emotion.emotion_stats import extract_personality_tendency
 
 app = FastAPI()
 
