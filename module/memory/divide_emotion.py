@@ -1,7 +1,8 @@
 import os
 import json
-from utils import logger, get_mongo_client
+from utils import logger, get_mongo_client  # ロガーとMongo関数のインポート
 
+# 日本語感情名 → 英語ファイル名の対応辞書
 EMOTION_MAP = {
     "喜び": "Joy", "期待": "Anticipation", "怒り": "Anger", "嫌悪": "Disgust", "悲しみ": "Sadness",
     "驚き": "Surprise", "恐れ": "Fear", "信頼": "Trust", "楽観": "Optimism", "誇り": "Pride",
@@ -12,6 +13,7 @@ EMOTION_MAP = {
     "愛": "Love", "希望": "Hope", "優位": "Dominance"
 }
 
+# 感情の重みによる保存カテゴリ分類
 def get_memory_category(weight):
     if weight >= 95:
         return "long"
@@ -20,12 +22,17 @@ def get_memory_category(weight):
     else:
         return "short"
 
+# 感情データをMongoDBに保存
 def divide_and_store(emotion_data: dict) -> str:
+    print("📥 [STEP] divide_and_store 開始")
     try:
         weight = emotion_data.get("重み", 0)
         category = get_memory_category(weight)
         main_emotion = emotion_data.get("主感情", "")
         english_emotion = EMOTION_MAP.get(main_emotion)
+
+        print(f"🔍 重み: {weight}, カテゴリ: {category}")
+        print(f"🔠 主感情: {main_emotion} → 英語: {english_emotion}")
 
         if not english_emotion:
             raise ValueError(f"主感情 '{main_emotion}' に対応する英語名が見つかりません")
@@ -37,15 +44,18 @@ def divide_and_store(emotion_data: dict) -> str:
         db = client["emotion_db"]
         collection = db["emotion_data"]
 
+        print("📡 MongoDBへ接続完了 → データ検索開始...")
         existing = collection.find_one({"emotion": english_emotion, "category": category})
 
         if existing:
+            print("📄 既存データに追記")
             collection.update_one(
                 {"_id": existing["_id"]},
                 {"$push": {"data.履歴": emotion_data}}
             )
             logger.info(f"[UPDATE] MongoDBに既存データ追記: {english_emotion} ({category})")
         else:
+            print("🆕 新規データとして登録")
             doc = {
                 "emotion": english_emotion,
                 "category": category,
@@ -56,10 +66,10 @@ def divide_and_store(emotion_data: dict) -> str:
             collection.insert_one(doc)
             logger.info(f"[INSERT] MongoDBに新規データ追加: {english_emotion} ({category})")
 
-        logger.info(f"[SUCCESS] 感情データ保存: mongo/{category}/{english_emotion}")
+        print(f"✅ [SUCCESS] 感情データの保存完了: mongo/{category}/{english_emotion}")
         return f"mongo/{category}/{english_emotion}"
 
     except Exception as e:
         logger.error(f"[ERROR] divide_and_store失敗: {e}")
+        print(f"❌ [ERROR] divide_and_store失敗: {e}")
         raise
-
