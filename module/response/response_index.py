@@ -6,7 +6,6 @@ from bson import ObjectId
 
 # MongoDB から index データを取得
 def load_index():
-    print("\U0001F4E5 [STEP] MongoDBからemotion_indexを取得します...")
     try:
         client = get_mongo_client()
         if client is None:
@@ -14,15 +13,13 @@ def load_index():
         db = client["emotion_db"]
         collection = db["emotion_index"]
         data = list(collection.find({}))
-        print(f"✅ [SUCCESS] emotion_index データ件数: {len(data)}")
         return data
     except Exception as e:
-        print(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
+        logger.error(f"MongoDBからの取得に失敗: {e}")
         return []
 
 # インデックスをカテゴリに分類
 def load_and_categorize_index():
-    print("\U0001F4C2 [STEP] インデックスをカテゴリごとに分類します...")
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
 
@@ -30,9 +27,6 @@ def load_and_categorize_index():
         category = item.get("category", "unknown")
         if category in categorized:
             categorized[category].append(item)
-
-    for cat, items in categorized.items():
-        print(f"\U0001F4CA {cat}カテゴリ: {len(items)} 件")
 
     return categorized
 
@@ -43,9 +37,7 @@ def compute_composition_difference(comp1, comp2):
 
 # キーワード一致でフィルタ
 def filter_by_keywords(index_data, input_keywords):
-    print(f"\U0001F50D キーワードフィルタ適用: {input_keywords}")
     filtered = [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
-    print(f"\U0001F3AF 一致件数: {len(filtered)}")
     return filtered
 
 # 類似スコアを計算
@@ -59,8 +51,6 @@ def calculate_composition_score(base_comp: dict, target_comp: dict) -> float:
 
 # 構成比で最も近いデータを選出
 def find_best_match_by_composition(current_composition, candidates):
-    print(f"\U0001F50E 構成比マッチング対象数: {len(candidates)}")
-
     def is_valid_candidate(candidate_comp, base_comp):
         base_filtered = {k: v for k, v in base_comp.items() if v > 5}
         cand_filtered = {k: v for k, v in candidate_comp.items() if v > 5}
@@ -81,31 +71,34 @@ def find_best_match_by_composition(current_composition, candidates):
         c for c in candidates if is_valid_candidate(c["構成比"], current_composition)
     ]
 
-    print(f"✅ 有効な候補数: {len(valid_candidates)}")
     if not valid_candidates:
-        print("❌ 構成比マッチ候補なし")
         return None
 
     best = max(valid_candidates, key=lambda c: calculate_composition_score(current_composition, c["構成比"]))
-    print("\U0001F3C5 最も構成比が近い候補を選出")
     return best
 
 # 最適な参照データを抽出
 def extract_best_reference(current_emotion, index_data, category):
-    print(f"\n============================")
+    print("============================")
     print(f"\U0001F4D8 [カテゴリ: {category}] 参照候補の抽出開始")
 
     input_keywords = current_emotion.get("keywords", [])
     matched = filter_by_keywords(index_data, input_keywords)
+    print(f"\U0001F50D キーワードフィルタ適用: {input_keywords}")
+    print(f"\U0001F3AF 一致件数: {len(matched)}")
 
     if not matched:
-        print(f"\U0001F7E8 {category}カテゴリ: キーワード一致なし → スキップ")
+        print(f"🟨 {category}カテゴリ: キーワード一致なし → スキップ")
+        print("============================")
         return None
 
     best_match = find_best_match_by_composition(current_emotion.get("構成比", {}), matched)
+    print(f"\U0001F50E 構成比マッチング対象数: {len(matched)}")
+    print(f"✅ 有効な候補数: {len([m for m in matched if m == best_match]) if best_match else 0}")
 
     if best_match:
         print(f"✅ {category}カテゴリ: ベストマッチが見つかりました")
+        print("============================")
 
         save_path = best_match.get("保存先")
         if not save_path:
@@ -119,14 +112,8 @@ def extract_best_reference(current_emotion, index_data, category):
             "date": best_match.get("date")
         }
 
-        def convert_objectid(obj):
-            if isinstance(obj, ObjectId):
-                return str(obj)
-            raise TypeError(f"Type {type(obj)} not serializable")
-
-        print(f"[DEBUG] extract_best_reference() の返却データ: {json.dumps(result, default=convert_objectid, ensure_ascii=False, indent=2)}")
         return result
 
-    print(f"\U0001F7E5 {category}カテゴリ: 一致はあるが構成比が合致しない")
+    print(f"🟥 {category}カテゴリ: 一致はあるが構成比が合致しない")
+    print("============================")
     return None
-
