@@ -15,7 +15,7 @@ from module.response.main_response import run_response_pipeline
 import module.memory.main_memory as memory
 from utils import logger
 from llm_client import extract_emotion_summary
-from module.memory.emotion_stats import extract_personality_tendency
+from module.memory.index_emotion import extract_personality_tendency
 
 app = FastAPI()
 
