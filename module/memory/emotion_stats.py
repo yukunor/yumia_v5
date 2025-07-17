@@ -34,7 +34,11 @@ def get_top_long_emotions():
 
         for i, doc in enumerate(long_docs, start=1):
             emotion_en = doc.get("emotion", "Unknown").strip()
-            emotion_jp = emotion_map.get(emotion_en, emotion_en)
+            if emotion_en not in emotion_map:
+                print(f"[SKIP] 未対応の感情: {emotion_en}")
+                continue  # 未定義の感情はスキップ
+
+            emotion_jp = emotion_map[emotion_en]
             history_list = doc.get("履歴", [])
             print(f"[DEBUG] doc {i} を処理中: emotion = {emotion_en} → {emotion_jp}")
             print(f"[DEBUG] doc {i} の履歴数: {len(history_list)}")
@@ -132,4 +136,3 @@ if __name__ == "__main__":
     if debug:
         print("📊 上位主感情（longカテゴリ）:", get_top_long_emotions())
         synthesize_current_emotion()
-
