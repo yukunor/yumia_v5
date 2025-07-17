@@ -31,12 +31,16 @@ def get_top_long_emotions():
         long_docs = collection.find({"category": "long"})
         counter = Counter()
 
-        for doc in long_docs:
+        for i, doc in enumerate(long_docs, start=1):
             emotion_en = doc.get("emotion", "Unknown").strip()
             emotion_jp = emotion_map.get(emotion_en, emotion_en)
             history_list = doc.get("履歴", [])
-            print(f"[DEBUG] doc.emotion: {emotion_en} → {emotion_jp}, 履歴数: {len(history_list)}")
+            print(f"[DEBUG] doc {i} を処理中: emotion = {emotion_en} → {emotion_jp}")
+            print(f"[DEBUG] doc {i} の履歴数: {len(history_list)}")
             counter[emotion_jp] += len(history_list)
+
+        total = sum(counter.values())
+        print(f"[DEBUG] 主感情カウント合計: {total} 件")
 
         return counter.most_common(4)
 
