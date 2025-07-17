@@ -111,6 +111,9 @@ def synthesize_current_emotion():
 
 # メイン動作（例）
 if __name__ == "__main__":
-    print("📊 上位主感情（longカテゴリ）:", get_top_long_emotions())
-    synthesize_current_emotion()
+    # デバッグ用として使う場合のみ出力
+    debug = os.getenv("DEBUG_MODE", "false").lower() == "true"
+    if debug:
+        print("📊 上位主感情（longカテゴリ）:", get_top_long_emotions())
+        synthesize_current_emotion()
 
