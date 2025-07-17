@@ -1,13 +1,37 @@
 import os
 import json
-from collections import defaultdict
-from module.memory.main_memory import ALL_EMOTIONS  # 感情リストを共通化
+from collections import defaultdict, Counter
+from pymongo import MongoClient
 from utils import logger
+from module.memory.main_memory import ALL_EMOTIONS  # 感情リストを共通化
 
-# ファイルパス（リポジトリのルートを基準にする）
+# ファイルパス設定
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 HISTORY_PATH = os.path.join(BASE_DIR, "emotion_history.jsonl")
 CURRENT_STATE_PATH = os.path.join(BASE_DIR, "current_emotion_state.json")  # 現在の気分出力先
+
+# MongoDBからlongカテゴリの主感情履歴数を取得（上位4）
+def get_top_long_emotions():
+    try:
+        client = MongoClient("mongodb://localhost:27017")  # ← 環境に応じてURI変更
+        db = client["emotion_db"]
+        collection = db["emotion_index"]
+
+        # longカテゴリを対象
+        long_docs = collection.find({"category": "long"})
+        counter = Counter()
+
+        for doc in long_docs:
+            emotion = doc.get("emotion", "Unknown")
+            history_list = doc.get("履歴", [])
+            count = len(history_list)
+            counter[emotion] += count
+
+        return counter.most_common(4)
+
+    except Exception as e:
+        logger.error(f"[ERROR] MongoDBからlongカテゴリ感情の取得に失敗: {e}")
+        return []
 
 # 指定件数の平均を計算する補助関数
 def _average_emotions(data_list):
@@ -50,7 +74,6 @@ def get_emotion_averages():
         }
 
 # 現在の気分を合成
-
 def synthesize_current_emotion():
     try:
         averages = get_emotion_averages()
@@ -67,7 +90,6 @@ def synthesize_current_emotion():
                 2
             )
 
-        # 主感情を特定
         dominant = max(result.items(), key=lambda x: x[1])[0]
         output = {
             "現在の気分": result,
@@ -86,3 +108,8 @@ def synthesize_current_emotion():
             "現在の気分": {e: 0 for e in ALL_EMOTIONS},
             "主感情": "未定義"
         }
+
+# メイン動作（例）
+if __name__ == "__main__":
+    print("📊 上位主感情（longカテゴリ）:", get_top_long_emotions())
+    synthesize_current_emotion()
