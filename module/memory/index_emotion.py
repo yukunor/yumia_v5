@@ -65,7 +65,7 @@ def extract_personality_tendency() -> dict:
     """
     MongoDBのemotion_dataコレクションから、
     categoryがlongの履歴およびemotionを取得し、
-    主感情を集計して人格傾向を抽出する。
+    主感情を集計して人格傾向を抽出する（デバッグ強化版）。
     """
     emotion_counter = Counter()
     try:
@@ -81,29 +81,43 @@ def extract_personality_tendency() -> dict:
         count = 0
 
         for idx, doc in enumerate(docs):
-            print(f"[DEBUG] doc {idx + 1} を処理中: emotion = {doc.get('emotion', '未定義')}")
+            try:
+                print(f"[DEBUG] doc {idx + 1} を処理中: emotion = {doc.get('emotion', '未定義')}")
 
-            # ドキュメント直下のemotionフィールドもカウント対象にする
-            top_emotion = doc.get("emotion")
-            if top_emotion:
-                emotion_counter[top_emotion] += 1
-                count += 1
-
-            # data.履歴 の中身から主感情を集計
-            history_list = doc.get("data", {}).get("履歴", [])
-            if not isinstance(history_list, list):
-                print(f"[ERROR] 履歴がlist型でない: type={type(history_list)} → doc_id={doc.get('_id')}")
-                continue
-
-            print(f"[DEBUG] 履歴数: {len(history_list)}")
-            for entry in history_list:
-                main_emotion = entry.get("主感情")
-                if main_emotion:
-                    emotion_counter[main_emotion] += 1
+                # emotionの取得
+                top_emotion = doc.get("emotion")
+                if top_emotion:
+                    emotion_counter[top_emotion] += 1
                     count += 1
 
-        if count == 0:
-            print("⚠️ 主感情が1件も抽出されませんでした")
+                # data取得の安全確認
+                data = doc.get("data")
+                if not isinstance(data, dict):
+                    print(f"[ERROR] doc {idx + 1} の data フィールドが dict でない: type={type(data)}")
+                    continue
+
+                # 履歴取得と検証
+                history_list = data.get("履歴", [])
+                if not isinstance(history_list, list):
+                    print(f"[ERROR] doc {idx + 1} の履歴が list でない: type={type(history_list)}")
+                    continue
+
+                print(f"[DEBUG] doc {idx + 1} の履歴数: {len(history_list)}")
+
+                for hidx, entry in enumerate(history_list):
+                    try:
+                        if not isinstance(entry, dict):
+                            print(f"[ERROR] 履歴 entry[{hidx}] が dict でない: {entry}")
+                            continue
+                        main_emotion = entry.get("主感情")
+                        if main_emotion:
+                            emotion_counter[main_emotion] += 1
+                            count += 1
+                    except Exception as he:
+                        print(f"[ERROR] doc {idx + 1} - 履歴 entry[{hidx}] 処理中に例外発生: {he}")
+
+            except Exception as de:
+                print(f"[ERROR] doc {idx + 1} の処理で例外発生: {de}")
 
         print(f"[DEBUG] 主感情カウント合計: {count} 件")
         print("📊 現在の人格傾向（long保存データの主感情カウント）:")
@@ -113,5 +127,5 @@ def extract_personality_tendency() -> dict:
         return dict(emotion_counter.most_common(4))
 
     except Exception as e:
-        logger.error(f"[ERROR] 人格傾向データ抽出失敗: {e}")
+        print(f"[ERROR] 人格傾向データ抽出全体で失敗: {e}")
         return {}
