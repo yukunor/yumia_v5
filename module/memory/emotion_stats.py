@@ -24,6 +24,7 @@ def get_top_long_emotions():
         for doc in long_docs:
             emotion = doc.get("emotion", "Unknown")
             history_list = doc.get("履歴", [])
+            print(f"[DEBUG] doc.emotion: {emotion}, 履歴数: {len(history_list)}")  # ← 追加
             count = len(history_list)
             counter[emotion] += count
 
