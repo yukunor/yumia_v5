@@ -1,11 +1,12 @@
 import os
 import pymongo
 
+# MongoDB接続設定
 MONGO_URL = os.environ.get("MONGODB_URI")
 if not MONGO_URL:
     raise EnvironmentError("環境変数 'MONGODB_URI' が設定されていません")
 
-DB_NAME = "emotion_db"  # ← 実際のデータベース名に変更
+DB_NAME = "emotion_db"
 COLLECTION_NAME = "emotion_data"
 
 client = pymongo.MongoClient(MONGO_URL)
@@ -16,7 +17,6 @@ print("[DEBUG] MongoDB Atlas接続成功")
 # 件数確認
 count = 0
 docs = list(collection.find({"category": "long"}))
-
 print(f"[DEBUG] 該当ドキュメント数: {len(docs)}")
 
 for doc in docs:
@@ -35,8 +35,7 @@ for doc in docs:
         try:
             insert_result = collection.insert_one(new_doc)
             if insert_result.inserted_id:
-                collection.delete_one({"_id": _id})
-                print(f"[完了] {_id} → 新ID: {insert_result.inserted_id} に移行完了")
+                print(f"[完了] {_id} → 新ID: {insert_result.inserted_id} に移行完了（削除せず残す）")
             else:
                 print(f"[失敗] {_id} の挿入に失敗しました")
 
@@ -46,4 +45,3 @@ for doc in docs:
         print(f"[スキップ] _id: {_id} | data形式: {type(data)}")
 
 print(f"[結果] 修正済み件数: {count}")
-
