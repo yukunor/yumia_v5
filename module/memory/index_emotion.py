@@ -76,13 +76,12 @@ def extract_personality_tendency() -> dict:
 
         print("📡 MongoDBクライアント接続完了 → longカテゴリを走査")
 
-        # longカテゴリのデータを検索
         docs = collection.find({"category": "long"})
+        count = 0
 
-        count = 0  # デバッグ用: 主感情カウント数
         for doc in docs:
             history_list = doc.get("data", {}).get("履歴", [])
-            print(f"[DEBUG] 履歴数: {len(history_list)}")  # デバッグ出力
+            print(f"[DEBUG] 履歴数: {len(history_list)}")
             for entry in history_list:
                 main_emotion = entry.get("主感情")
                 if main_emotion:
@@ -92,8 +91,8 @@ def extract_personality_tendency() -> dict:
         if count == 0:
             print("⚠️ 主感情が1件も抽出されませんでした")
 
-        print(f"[DEBUG] 主感情ごとの出現数: {dict(emotion_counter)}")
-
+        # 主感情ごとの集計結果のみ出力（個別表示はカット）
+        print(f"[DEBUG] 主感情カウント合計: {count} 件")
         print("📊 現在の人格傾向（long保存データの主感情カウント）:")
         for emotion, cnt in emotion_counter.most_common():
             print(f"  - {emotion}: {cnt}件")
