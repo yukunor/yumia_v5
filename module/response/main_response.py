@@ -170,6 +170,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         reference_data = best_match or {"emotion": {}, "source": "\u4e0d\u660e", "date": "\u4e0d\u660e"}
         print(f"[INFO] 応答に使用した感情データ: source={reference_data.get('source')}, date={reference_data.get('date')}, 主感情={reference_data.get('emotion', {}).get('主感情')}")
 
+
         response_emotion["emotion_vector"] = response_emotion.get("\u69cb\u6210\u6bd4", {})
         handle_emotion(response_emotion, user_input=user_input, response_text=final_response)
 
