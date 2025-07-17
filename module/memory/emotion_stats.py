@@ -21,12 +21,12 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 HISTORY_PATH = os.path.join(BASE_DIR, "emotion_history.jsonl")
 CURRENT_STATE_PATH = os.path.join(BASE_DIR, "current_emotion_state.json")
 
-# MongoDBからlongカテゴリの主感情履歴数を取得（上位4）
+# MongoDBからlongカテゴリの主感情カウント（emotionフィールド）を取得
 def get_top_long_emotions():
     try:
         client = get_mongo_client()
         db = client["emotion_db"]
-        collection = db["emotion_index"]
+        collection = db["emotion_data"]
 
         print("📡 MongoDBクライアント接続完了 → longカテゴリを走査")
         long_docs = collection.find({"category": "long"})
@@ -34,15 +34,9 @@ def get_top_long_emotions():
 
         for i, doc in enumerate(long_docs, start=1):
             emotion_en = doc.get("emotion", "Unknown").strip()
-            if emotion_en not in emotion_map:
-                print(f"[SKIP] 未対応の感情: {emotion_en}")
-                continue  # 未定義の感情はスキップ
-
-            emotion_jp = emotion_map[emotion_en]
-            history_list = doc.get("履歴", [])
+            emotion_jp = emotion_map.get(emotion_en, emotion_en)
             print(f"[DEBUG] doc {i} を処理中: emotion = {emotion_en} → {emotion_jp}")
-            print(f"[DEBUG] doc {i} の履歴数: {len(history_list)}")
-            counter[emotion_jp] += len(history_list)
+            counter[emotion_jp] += 1
 
         total = sum(counter.values())
         print(f"[DEBUG] 主感情カウント合計: {total} 件")
@@ -136,3 +130,4 @@ if __name__ == "__main__":
     if debug:
         print("📊 上位主感情（longカテゴリ）:", get_top_long_emotions())
         synthesize_current_emotion()
+
