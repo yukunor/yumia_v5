@@ -1,8 +1,7 @@
 import os
 import json
 from collections import defaultdict, Counter
-from pymongo import MongoClient
-from utils import logger
+from utils import logger, get_mongo_client  # ← 修正: get_mongo_clientを使用
 from module.memory.main_memory import ALL_EMOTIONS  # 感情リストを共通化
 
 # ファイルパス設定
@@ -13,7 +12,7 @@ CURRENT_STATE_PATH = os.path.join(BASE_DIR, "current_emotion_state.json")  # 現
 # MongoDBからlongカテゴリの主感情履歴数を取得（上位4）
 def get_top_long_emotions():
     try:
-        client = MongoClient("mongodb://localhost:27017")  # ← 環境に応じてURI変更
+        client = get_mongo_client()  # ← 修正済み
         db = client["emotion_db"]
         collection = db["emotion_index"]
 
@@ -24,7 +23,7 @@ def get_top_long_emotions():
         for doc in long_docs:
             emotion = doc.get("emotion", "Unknown")
             history_list = doc.get("履歴", [])
-            print(f"[DEBUG] doc.emotion: {emotion}, 履歴数: {len(history_list)}")  # ← 追加
+            print(f"[DEBUG] doc.emotion: {emotion}, 履歴数: {len(history_list)}")  # ← デバッグ用
             count = len(history_list)
             counter[emotion] += count
 
@@ -114,3 +113,4 @@ def synthesize_current_emotion():
 if __name__ == "__main__":
     print("📊 上位主感情（longカテゴリ）:", get_top_long_emotions())
     synthesize_current_emotion()
+
