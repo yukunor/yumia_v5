@@ -91,7 +91,7 @@ def extract_personality_tendency() -> dict:
         if count == 0:
             print("⚠️ 主感情が1件も抽出されませんでした")
 
-        # 主感情ごとの集計結果のみ出力（個別表示はカット）
+        # 集計結果だけ表示（感情数と内訳）
         print(f"[DEBUG] 主感情カウント合計: {count} 件")
         print("📊 現在の人格傾向（long保存データの主感情カウント）:")
         for emotion, cnt in emotion_counter.most_common():
