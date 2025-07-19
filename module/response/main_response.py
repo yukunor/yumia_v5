@@ -100,6 +100,12 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
 
     try:
         raw_response, initial_emotion = estimate_emotion(user_input, current_emotion=current_feeling)
+
+        # ✅ 追加ログ出力
+        print("📝 [LLM初期応答文] " + raw_response)
+        print(f"🔍 [初期感情構成比] {initial_emotion.get('構成比', {})}")
+        print(f"🔑 [検索用キーワード] {initial_emotion.get('キーワード', [])}")
+
         save_emotion_sample(user_input, raw_response, initial_emotion.get("構成比", {}))
     except Exception as e:
         logger.error(f"[ERROR] 感情推定中にエラー発生: {e}")
