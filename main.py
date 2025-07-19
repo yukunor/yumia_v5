@@ -27,6 +27,18 @@ def sanitize_output_for_display(text: str) -> str:
     text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", text, flags=re.DOTALL)
     return text.strip()
 
+@app.get("/")
+def get_ui():
+    return FileResponse("static/index.html")
+
+@app.get("/history")
+def get_history():
+    try:
+        return {"history": load_history()}
+    except Exception as e:
+        logger.exception("履歴取得中に例外が発生しました")
+        raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
+
 @app.post("/chat")
 def chat(user_message: UserMessage):
     print("✅ /chat エンドポイントに到達")
@@ -76,14 +88,3 @@ def chat(user_message: UserMessage):
         logger.exception("チャット中に例外が発生しました")
         raise HTTPException(status_code=500, detail="チャット中にエラーが発生しました。")
 
-@app.get("/")
-def get_ui():
-    return FileResponse("static/index.html")
-
-@app.get("/history")
-def get_history():
-    try:
-        return {"history": load_history()}
-    except Exception as e:
-        logger.exception("履歴取得中に例外が発生しました")
-        raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
