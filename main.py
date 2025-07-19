@@ -41,13 +41,13 @@ def chat(user_message: UserMessage):
         response, emotion_data = run_response_pipeline(user_input)
         print("✅ 応答と感情データ取得 完了")
 
-        print("🧾 取得した感情データの内容:", emotion_data)
-        summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
-        print("📊 構成比サマリ:", summary)
+        #print("🧾 取得した感情データの内容:", emotion_data)
+        #summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
+        #print("📊 構成比サマリ:", summary)
 
-        print("🧼 応答のサニタイズ 開始")
-        sanitized_response = sanitize_output_for_display(response)
-        print("✅ サニタイズ完了:", sanitized_response)
+        #print("🧼 応答のサニタイズ 開始")
+        #sanitized_response = sanitize_output_for_display(response)
+        #print("✅ サニタイズ完了:", sanitized_response)
 
         print("💬 最終応答内容（再掲）:")
         print(f"💭{sanitized_response}")
