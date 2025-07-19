@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime
-from .divide_emotion import divide_and_store
+from .divide_emotion import divide_and_store  # ✅ divide_and_store は index 保存しない設計に統一
 from .index_emotion import update_emotion_index
 from utils import logger, get_mongo_client
 
@@ -28,8 +28,8 @@ def pad_emotion_vector(vector):
 
 def handle_emotion(emotion_data, user_input=None, response_text=None):
     try:
-        memory_path = divide_and_store(emotion_data)
-        update_emotion_index(emotion_data, memory_path)
+        memory_path = divide_and_store(emotion_data)  # ✅ データ保存のみ行う
+        update_emotion_index(emotion_data, memory_path)  # ✅ index 保存はここでのみ実行
         logger.info("[INFO] 感情データ処理が完了しました。")
     except Exception as e:
         logger.error(f"[ERROR] 感情データ処理中にエラー発生: {e}")
@@ -61,4 +61,3 @@ def append_emotion_history(emotion_data):
         logger.info("[INFO] MongoDBに感情履歴を記録しました。")
     except Exception as e:
         logger.error(f"[ERROR] 感情履歴の保存に失敗しました: {e}")
-
