@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ChatGPT風 UI</title>
+  <title>ChatGPT風 UI（ファイル添付対応）</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -63,6 +63,7 @@
       padding: 20px;
       background-color: #fff;
       position: relative;
+      align-items: center;
     }
 
     .input-area textarea {
@@ -74,7 +75,7 @@
       overflow-y: auto;
       min-height: 75px;
       max-height: 160px;
-      width: calc(100% - 60px);
+      width: calc(100% - 140px);
       box-sizing: border-box;
       transition: height 0.2s ease;
       position: relative;
@@ -90,6 +91,10 @@
       color: gray;
       pointer-events: none;
       background-color: transparent;
+    }
+
+    .input-area input[type="file"] {
+      margin-right: 10px;
     }
 
     .input-area button {
@@ -126,6 +131,7 @@
   <div class="chat-container">
     <div class="messages" id="messages"></div>
     <div class="input-area">
+      <input type="file" id="fileInput" />
       <textarea id="userInput" placeholder="メッセージを入力..." rows="1" oninput="autoResizeInput()"></textarea>
       <div class="bottom-line"></div>
       <button onclick="sendMessage()"></button>
@@ -140,21 +146,28 @@
 
     async function sendMessage() {
       const userInput = document.getElementById('userInput');
+      const fileInput = document.getElementById('fileInput');
       const message = userInput.value.trim();
-      if (message === "") return;
+      const file = fileInput.files[0];
 
-      appendMessage("user", message);
+      if (message === "" && !file) return;
+
+      if (message) appendMessage("user", message);
       userInput.value = "";
+      fileInput.value = "";
 
       const systemDiv = appendMessage("system", "応答生成中...");
 
       try {
-        const response = await fetch("/chat", {
+        const formData = new FormData();
+        formData.append("message", message);
+        if (file) {
+          formData.append("file", file);
+        }
+
+        const response = await fetch("/chat_with_file", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ message: message })
+          body: formData
         });
 
         const data = await response.json();
@@ -232,3 +245,4 @@
   </script>
 </body>
 </html>
+
