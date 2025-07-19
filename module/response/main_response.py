@@ -104,7 +104,7 @@ def run_response_pipeline(user_input: str) -> tuple[str, dict]:
         # ✅ 追加ログ出力
         print("📝 [LLM初期応答文] " + raw_response)
         print(f"🔍 [初期感情構成比] {initial_emotion.get('構成比', {})}")
-        print(f"🔑 [検索用キーワード] {initial_emotion.get('キーワード', [])}")
+        print(f"🔑 [検索用キーワード] {initial_emotion.get('keywords', [])}")
 
         save_emotion_sample(user_input, raw_response, initial_emotion.get("構成比", {}))
     except Exception as e:
