@@ -3,23 +3,19 @@ import os
 import re
 import traceback
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 
-from utils import append_history, load_history
+from utils import append_history, load_history, logger
 from module.response.main_response import run_response_pipeline
 import module.memory.main_memory as memory
-from utils import logger
 from llm_client import extract_emotion_summary
 from module.memory.index_emotion import extract_personality_tendency
-from fastapi import UploadFile, File, Form
-from fastapi.responses import JSONResponse
 from module.file_handler.file_router import handle_uploaded_file
-
 
 app = FastAPI()
 
@@ -55,7 +51,7 @@ async def chat(
 
         if file:
             logger.debug(f"📎 添付ファイル名: {file.filename}")
-            extracted_text = await handle_uploaded_file(file)  # ← ファイル処理呼び出し
+            extracted_text = await handle_uploaded_file(file)  # ファイル処理呼び出し
             if extracted_text:
                 user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
 
