@@ -34,7 +34,7 @@ def normalize_emotion_vector(構成比: dict) -> dict:
 
 # === MongoDBへのインデックス保存 ===
 def update_emotion_index(emotion_data, memory_path):
-    print("📥 MongoDBへのインデックス保存を開始します...")
+    #print("📥 MongoDBへのインデックス保存を開始します...")
     try:
         client = get_mongo_client()
         if client is None:
