@@ -28,6 +28,13 @@ def pad_emotion_vector(vector):
 
 def handle_emotion(emotion_data, user_input=None, response_text=None):
     try:
+        # 欠損項目を補完する（②③に対応）
+        emotion_data.setdefault("keywords", [])
+        emotion_data.setdefault("状況", "")
+        emotion_data.setdefault("心理反応", "")
+        emotion_data.setdefault("関係性変化", "")
+        emotion_data.setdefault("関連", [])
+
         memory_path = divide_and_store(emotion_data)  # ✅ データ保存のみ行う
         update_emotion_index(emotion_data, memory_path)  # ✅ index 保存はここでのみ実行
         logger.info("[INFO] 感情データ処理が完了しました。")
