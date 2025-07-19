@@ -65,7 +65,7 @@ def extract_personality_tendency() -> dict:
     """
     MongoDBのemotion_dataコレクションから、
     categoryがlongの履歴およびemotionを取得し、
-    主感情を集計して人格傾向を抽出する（デバッグ強化版）。
+    主感情を集計して人格傾向を抽出する（整形出力付き）。
     """
     emotion_counter = Counter()
     try:
@@ -90,13 +90,12 @@ def extract_personality_tendency() -> dict:
                     emotion_counter[top_emotion] += 1
                     count += 1
 
-                # data取得の安全確認
+                # data取得と検証
                 data = doc.get("data")
                 if not isinstance(data, dict):
                     print(f"[ERROR] doc {idx + 1} の data フィールドが dict でない: type={type(data)}")
                     continue
 
-                # 履歴取得と検証
                 history_list = data.get("履歴", [])
                 if not isinstance(history_list, list):
                     print(f"[ERROR] doc {idx + 1} の履歴が list でない: type={type(history_list)}")
@@ -120,8 +119,8 @@ def extract_personality_tendency() -> dict:
                 print(f"[ERROR] doc {idx + 1} の処理で例外発生: {de}")
 
         print(f"[DEBUG] 主感情カウント合計: {count} 件")
-        print("📊 現在の人格傾向（long保存データの主感情カウント）:")
-        for emotion, cnt in emotion_counter.most_common():
+        print("🧭 現在人格傾向（上位4件）:")
+        for emotion, cnt in emotion_counter.most_common(4):
             print(f"  - {emotion}: {cnt}件")
 
         return dict(emotion_counter.most_common(4))
