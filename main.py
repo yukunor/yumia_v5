@@ -18,6 +18,7 @@ from llm_client import extract_emotion_summary
 from module.memory.index_emotion import extract_personality_tendency
 from fastapi import UploadFile, File, Form
 from fastapi.responses import JSONResponse
+from module.file_handler.file_router import handle_uploaded_file
 
 
 app = FastAPI()
@@ -54,9 +55,9 @@ async def chat(
 
         if file:
             logger.debug(f"📎 添付ファイル名: {file.filename}")
-            # 必要に応じて以下でファイル内容を読み取り
-            # content = await file.read()
-            # ファイルの処理ロジックをここに追加
+            extracted_text = await handle_uploaded_file(file)  # ← ファイル処理呼び出し
+            if extracted_text:
+                user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
 
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
