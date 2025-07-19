@@ -65,7 +65,7 @@ def extract_personality_tendency() -> dict:
     """
     MongoDBのemotion_dataコレクションから、
     categoryがlongの履歴およびemotionを取得し、
-    主感情を集計して人格傾向を抽出する（整形出力付き）。
+    主感情を集計して人格傾向を抽出する（簡潔ログ版）。
     """
     emotion_counter = Counter()
     try:
@@ -80,43 +80,27 @@ def extract_personality_tendency() -> dict:
         docs = collection.find({"category": "long"})
         count = 0
 
-        for idx, doc in enumerate(docs):
-            try:
-                print(f"[DEBUG] doc {idx + 1} を処理中: emotion = {doc.get('emotion', '未定義')}")
+        for doc in docs:
+            top_emotion = doc.get("emotion")
+            if top_emotion:
+                emotion_counter[top_emotion] += 1
+                count += 1
 
-                # emotionの取得
-                top_emotion = doc.get("emotion")
-                if top_emotion:
-                    emotion_counter[top_emotion] += 1
+            data = doc.get("data")
+            if not isinstance(data, dict):
+                continue
+
+            history_list = data.get("履歴", [])
+            if not isinstance(history_list, list):
+                continue
+
+            for entry in history_list:
+                if not isinstance(entry, dict):
+                    continue
+                main_emotion = entry.get("主感情")
+                if main_emotion:
+                    emotion_counter[main_emotion] += 1
                     count += 1
-
-                # data取得と検証
-                data = doc.get("data")
-                if not isinstance(data, dict):
-                    print(f"[ERROR] doc {idx + 1} の data フィールドが dict でない: type={type(data)}")
-                    continue
-
-                history_list = data.get("履歴", [])
-                if not isinstance(history_list, list):
-                    print(f"[ERROR] doc {idx + 1} の履歴が list でない: type={type(history_list)}")
-                    continue
-
-                print(f"[DEBUG] doc {idx + 1} の履歴数: {len(history_list)}")
-
-                for hidx, entry in enumerate(history_list):
-                    try:
-                        if not isinstance(entry, dict):
-                            print(f"[ERROR] 履歴 entry[{hidx}] が dict でない: {entry}")
-                            continue
-                        main_emotion = entry.get("主感情")
-                        if main_emotion:
-                            emotion_counter[main_emotion] += 1
-                            count += 1
-                    except Exception as he:
-                        print(f"[ERROR] doc {idx + 1} - 履歴 entry[{hidx}] 処理中に例外発生: {he}")
-
-            except Exception as de:
-                print(f"[ERROR] doc {idx + 1} の処理で例外発生: {de}")
 
         print(f"[DEBUG] 主感情カウント合計: {count} 件")
         print("🧭 現在人格傾向（上位4件）:")
