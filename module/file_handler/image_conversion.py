@@ -30,26 +30,28 @@ def convert_pdf_to_images(file_path: str) -> List[str]:
 
 def convert_docx_to_images(file_path: str) -> List[str]:
     """
-    DOCXを簡易的に画像化（テキスト抽出→画像生成）。
-    ※ 本格実装では html2image 等が望ましい。
+    DOCXを単純に画像化する（テキスト抽出や描画処理を行わず、レイアウト簡易化）。
+    ※ 本格的な画像化には外部ツールが必要。
     """
     try:
-        doc = Document(file_path)
-        text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
-        if not text:
-            return []
-
-        # テキストを白背景の画像に描画
+        # 仮に「このファイルを受け取った」という証明用のダミー画像を作成
+        # 本格実装では html2image や Word → PDF → Image 等に置き換え
         img = Image.new("RGB", (800, 600), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("arial.ttf", 16)
+            font = ImageFont.truetype("arial.ttf", 20)
         except:
             font = ImageFont.load_default()
 
-        draw.text((20, 20), text, fill=(0, 0, 0), font=font)
+        draw.text((30, 250), "DOCX file image placeholder", fill=(0, 0, 0), font=font)
 
         img_path = os.path.join(TEMP_IMAGE_DIR, f"{uuid4().hex}_docx.png")
+        img.save(img_path)
+        return [img_path]
+
+    except Exception as e:
+        print(f"[ERROR] DOCX画像化失敗: {e}")
+        return [].hex}_docx.png")
         img.save(img_path)
         return [img_path]
 
