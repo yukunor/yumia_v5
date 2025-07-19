@@ -41,50 +41,44 @@ def get_history():
 
 @app.post("/chat")
 def chat(user_message: UserMessage):
-    print("✅ /chat エンドポイントに到達")
+    logger.debug("✅ /chat エンドポイントに到達")
     try:
         user_input = user_message.message
-        print("📥 ユーザー入力取得完了:", user_input)
+        logger.debug(f"📥 ユーザー入力取得完了: {user_input}")
 
         append_history("user", user_input)
-        print("📝 ユーザー履歴追加完了")
+        logger.debug("📝 ユーザー履歴追加完了")
 
-        print("🔍 応答生成と感情推定 開始")
+        logger.debug("🔍 応答生成と感情推定 開始")
         response, emotion_data = run_response_pipeline(user_input)
-        print("✅ 応答と感情データ取得 完了")
+        logger.debug("✅ 応答と感情データ取得 完了")
 
-        #print("🧾 取得した感情データの内容:", emotion_data)
-        #summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
-        #print("📊 構成比サマリ:", summary)
+        logger.info(f"🧾 取得した感情データの内容: {emotion_data}")
+        summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
+        logger.info(f"📊 構成比サマリ: {summary}")
 
-        #print("🧼 応答のサニタイズ 開始")
-        #sanitized_response = sanitize_output_for_display(response)
-        #print("✅ サニタイズ完了:", sanitized_response)
-
-        print("💬 最終応答内容（再掲）:")
-        print(f"💭{sanitized_response}")
+        logger.debug("💬 最終応答内容（そのまま表示）:")
+        logger.debug(f"💭{response}")
         cleaned = summary.replace(f"（主感情: {emotion_data.get('主感情')}｜構成比: ", "").rstrip("）")
-        print(f"💞構成比（主感情: {emotion_data.get('主感情')}）: {cleaned}")
+        logger.debug(f"💞構成比（主感情: {emotion_data.get('主感情')}）: {cleaned}")
 
-        append_history("system", sanitized_response)
-        print("📝 応答履歴追加完了")
+        append_history("system", response)
+        logger.debug("📝 応答履歴追加完了")
 
-        print("💾 感情保存処理（同期実行）開始")
+        logger.debug("💾 感情保存処理（同期実行）開始")
         memory.handle_emotion(emotion_data)
 
-        print("🧠 人格傾向の抽出 開始")
+        logger.debug("🧠 人格傾向の抽出 開始")
         tendency = extract_personality_tendency()
-        print("🧭 現在人格傾向:", tendency)
+        logger.debug(f"🧭 現在人格傾向: {tendency}")
 
-        print("📤 応答と履歴を返却")
+        logger.debug("📤 応答と履歴を返却")
         return {
-            "message": sanitized_response,
+            "message": response,
             "history": load_history(),
             "personality_tendency": tendency
         }
 
-    except Exception as e:
-        print("❌ 例外発生:", traceback.format_exc())
-        logger.exception("チャット中に例外が発生しました")
+    except Exception:
+        logger.exception("❌ チャット中に例外が発生しました")
         raise HTTPException(status_code=500, detail="チャット中にエラーが発生しました。")
-
