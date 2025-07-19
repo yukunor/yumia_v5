@@ -16,6 +16,9 @@ import module.memory.main_memory as memory
 from utils import logger
 from llm_client import extract_emotion_summary
 from module.memory.index_emotion import extract_personality_tendency
+from fastapi import UploadFile, File, Form
+from fastapi.responses import JSONResponse
+
 
 app = FastAPI()
 
@@ -40,11 +43,20 @@ def get_history():
         raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
 
 @app.post("/chat")
-def chat(user_message: UserMessage):
+async def chat(
+    message: str = Form(...),
+    file: UploadFile = File(None)
+):
     logger.debug("✅ /chat エンドポイントに到達")
     try:
-        user_input = user_message.message
+        user_input = message
         logger.debug(f"📥 ユーザー入力取得完了: {user_input}")
+
+        if file:
+            logger.debug(f"📎 添付ファイル名: {file.filename}")
+            # 必要に応じて以下でファイル内容を読み取り
+            # content = await file.read()
+            # ファイルの処理ロジックをここに追加
 
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
@@ -73,12 +85,12 @@ def chat(user_message: UserMessage):
         logger.debug(f"🧭 現在人格傾向: {tendency}")
 
         logger.debug("📤 応答と履歴を返却")
-        return {
+        return JSONResponse(content={
             "message": response,
             "history": load_history(),
             "personality_tendency": tendency
-        }
+        })
 
-    except Exception:
-        logger.exception("❌ チャット中に例外が発生しました")
-        raise HTTPException(status_code=500, detail="チャット中にエラーが発生しました。")
+    except Exception as e:
+        logger.error(f"[ERROR] /chat エンドポイントで例外発生: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
