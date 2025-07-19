@@ -53,7 +53,7 @@ def update_emotion_index(emotion_data, memory_path):
             "保存先": memory_path
         }
 
-        print(f"[DEBUG] インデックスに追加する内容: {index_entry}")
+        #print(f"[DEBUG] インデックスに追加する内容: {index_entry}")
         collection.insert_one(index_entry)
         print(f"[✅] MongoDBにemotion_indexを登録しました: {index_entry['date']}")
         logger.info(f"[MongoDB] emotion_index に登録: {index_entry['date']}")
