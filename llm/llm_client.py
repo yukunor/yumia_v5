@@ -12,6 +12,12 @@ from utils import (
 from module.memory.oblivion_emotion import clean_old_emotions
 from module.context.context_selector import select_contextual_history
 from module.memory.index_emotion import extract_personality_tendency
+from module.params import (
+    OPENAI_MODEL,
+    OPENAI_TEMPERATURE,
+    OPENAI_TOP_P,
+    OPENAI_MAX_TOKENS
+)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -26,15 +32,15 @@ def generate_gpt_response_from_history(history):
     try:
         logger.info("[INFO] OpenAI呼び出し開始")
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 *[{"role": entry["role"], "content": entry["message"]} for entry in selected_history],
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=2000,
-            temperature=0.7,
-            top_p=1.0
+            max_tokens=OPENAI_MAX_TOKENS,
+            temperature=OPENAI_TEMPERATURE,
+            top_p=OPENAI_TOP_P
         )
         logger.info("[INFO] OpenAI応答取得完了")
     except Exception as e:
@@ -91,14 +97,14 @@ def generate_emotion_from_prompt_with_context(user_input: str, reference_emotion
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1000,
-            temperature=0.7,
-            top_p=1.0
+            max_tokens=OPENAI_MAX_TOKENS,
+            temperature=OPENAI_TEMPERATURE,
+            top_p=OPENAI_TOP_P
         )
 
         full_response = response.choices[0].message.content.strip()
