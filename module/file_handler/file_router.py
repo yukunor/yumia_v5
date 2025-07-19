@@ -39,7 +39,7 @@ def save_temp_file(uploaded_file: UploadFile) -> str:
             except Exception as e:
                 print(f"[WARN] ファイル削除失敗: {f} - {e}")
 
-    # 📦 新しいファイルを保存
+    # 📆 新しいファイルを保存
     ext = os.path.splitext(uploaded_file.filename)[-1].lower()
     unique_name = f"{uuid4().hex}{ext}"
     save_path = os.path.join(TEMP_DIR, unique_name)
