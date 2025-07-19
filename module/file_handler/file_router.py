@@ -3,7 +3,7 @@ import shutil
 from uuid import uuid4
 from fastapi import UploadFile
 
-from module.file_handler.image_conversion import convert_to_image  # ← 画像変換専用モジュール
+from module.file_handler.image_conversion import convert_to_images  # 修正済：正しい関数名
 
 # 最大一時保存ファイル数
 MAX_TEMP_FILES = 3
@@ -59,7 +59,8 @@ def route_file_for_processing(uploaded_file: UploadFile | None) -> str:
     """
     ファイルの種類を判定し、処理対象ファイルのパスを返す。
     - テキストファイルの場合 → そのままのパスを返す
-    - 非テキストファイルの場合 → 画像化して返す
+    - 非テキストファイルの場合 → 画像化して返す（1枚目のみ）
+    - その他（画像ファイルなど） → そのまま返す
     ※ 最終的にすべて ocr_processor.py 側で処理される想定
     """
     if uploaded_file:
@@ -75,11 +76,14 @@ def route_file_for_processing(uploaded_file: UploadFile | None) -> str:
     if ext in TEXT_EXTENSIONS:
         return file_path
 
-    # 非テキスト（PDF, DOCXなど） → 画像変換して返す
+    # 非テキスト（PDF, DOCXなど） → 画像変換して返す（1枚目）
     elif ext in NON_TEXT_EXTENSIONS:
         try:
-            image_path = convert_to_image(file_path)
-            return image_path  # 画像としてOCRへ
+            image_paths = convert_to_images(file_path)
+            if image_paths:
+                return image_paths[0]  # 最初の画像のみ使用
+            else:
+                return ""
         except Exception as e:
             print(f"[ERROR] 画像変換失敗: {e}")
             return ""
@@ -87,3 +91,4 @@ def route_file_for_processing(uploaded_file: UploadFile | None) -> str:
     # その他（png, jpg など画像ファイル） → そのまま返す
     else:
         return file_path
+
