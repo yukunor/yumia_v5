@@ -102,10 +102,10 @@ def extract_personality_tendency() -> dict:
                     emotion_counter[main_emotion] += 1
                     count += 1
 
-        print(f"[DEBUG] 主感情カウント合計: {count} 件")
-        print("🧭 現在人格傾向（上位4件）:")
-        for emotion, cnt in emotion_counter.most_common(4):
-            print(f"  - {emotion}: {cnt}件")
+        #print(f"[DEBUG] 主感情カウント合計: {count} 件")
+        #print("🧭 現在人格傾向（上位4件）:")
+        #for emotion, cnt in emotion_counter.most_common(4):
+            #print(f"  - {emotion}: {cnt}件")
 
         return dict(emotion_counter.most_common(4))
 
