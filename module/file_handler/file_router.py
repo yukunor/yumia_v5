@@ -1,25 +1,27 @@
-# module/file_handler/file_router.py
-
 import os
 import shutil
-from fastapi import UploadFile
 from uuid import uuid4
+from fastapi import UploadFile
 
 from module.file_handler.ocr_processor import perform_ocr
 from module.file_handler.image_processor import process_image
 
+# 最大一時保存ファイル数
+MAX_TEMP_FILES = 3
+
 # テキスト系ファイル拡張子
 TEXT_EXTENSIONS = {".txt", ".md", ".csv", ".json", ".yaml", ".yml"}
 
-# 画像系ファイル拡張子
+# 画像系ファイル拡張子（画像データとして扱う）
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}
 
-# ドキュメント系拡張子（OCR対象：ファイルに埋め込まれた画像に対応するため）
+# ドキュメント系拡張子（OCR対象：画像に変換して処理）
 DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".pptx"}
 
 # 一時保存フォルダ
 TEMP_DIR = "temp_files"
 os.makedirs(TEMP_DIR, exist_ok=True)
+
 
 def save_temp_file(uploaded_file: UploadFile) -> str:
     """
@@ -29,7 +31,6 @@ def save_temp_file(uploaded_file: UploadFile) -> str:
     # 🔁 古いファイルを削除
     existing_files = [os.path.join(TEMP_DIR, f) for f in os.listdir(TEMP_DIR)]
     if len(existing_files) >= MAX_TEMP_FILES:
-        # 最終更新日時でソートして古い順に並べる
         existing_files.sort(key=lambda f: os.path.getmtime(f))
         files_to_delete = existing_files[:len(existing_files) - MAX_TEMP_FILES + 1]
         for f in files_to_delete:
@@ -47,6 +48,7 @@ def save_temp_file(uploaded_file: UploadFile) -> str:
         shutil.copyfileobj(uploaded_file.file, f)
 
     return save_path
+
 
 def get_latest_temp_file() -> str | None:
     """
@@ -89,11 +91,11 @@ def handle_uploaded_file(uploaded_file: UploadFile | None) -> tuple[str, str]:
     # 画像 or ドキュメント → OCR実施
     elif ext in IMAGE_EXTENSIONS or ext in DOCUMENT_EXTENSIONS:
         try:
-            text = perform_ocr(file_path)
+            text = perform_ocr(file_path)  # module/file_handler/ocr_processor.py を呼び出し
             if len(text.strip()) >= 10:
                 return text.strip(), "text"
             else:
-                return file_path, "image"
+                return file_path, "image"  # → image_processor.py 側で使う前提
         except Exception:
             return "", "none"
 
