@@ -32,30 +32,6 @@ def find_response_by_emotion(emotion_structure: dict) -> dict:
     composition = emotion_structure.get("構成比", {})
     keywords = emotion_structure.get("keywords", [])
 
-
-def load_emotion_by_date(path, target_date):
-    if path.startswith("mongo/"):
-        try:
-            parts = path.split("/")
-            if len(parts) == 3:
-                _, category, emotion_label = parts
-
-                try:
-                    db.client.admin.command("ping")
-                except Exception:
-                    return None
-
-                collection = db["emotion_data"]
-                doc = collection.find_one({"category": category, "emotion": emotion_label})
-
-                if doc and "data" in doc and "履歴" in doc["data"]:
-                    for entry in doc["data"]["履歴"]:
-                        if str(entry.get("date")) == str(target_date):
-                            return entry
-        except Exception as e:
-            logger.error(f"[ERROR] MongoDBデータ取得失敗: {e}")
-    return None
-
 def load_emotion_by_date(path, target_date):
     if path.startswith("mongo/"):
         try:
