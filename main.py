@@ -63,6 +63,8 @@ async def chat(
         logger.debug("✅ 応答と感情データ取得 完了")
 
         logger.info(f"🧾 取得した感情データの内容: {emotion_data}")
+        # LLMによる応答生成と感情構造抽出
+        # 実体は module/llm/llm_client.py の generate_emotion_from_prompt_with_context() を呼び出す
         summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
         logger.info(f"📊 構成比サマリ: {summary}")
 
