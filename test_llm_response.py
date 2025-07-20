@@ -1,17 +1,19 @@
+# test_llm_response.py
+
 import sys
 import os
 
 # モジュールパス追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
+sys.path.append(os.path.dirname(__file__))
 
-from llm.llm_client import (
+from module.llm.llm_client import (
     generate_emotion_from_prompt_with_context,
     extract_emotion_summary
 )
 
 if __name__ == "__main__":
     user_input = "今日はなんだか不安な気分です。"
-    current_emotion = {}  # ← 自分で明示。何も引き継がない
+    current_emotion = {}
 
     response, emotion_data = generate_emotion_from_prompt_with_context(user_input, current_emotion)
 
