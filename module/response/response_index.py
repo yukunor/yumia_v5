@@ -6,14 +6,14 @@ from bson import ObjectId
 
 # 英語→日本語変換辞書
 emotion_map = {
-    "Anger": "怒り", "Anticipation": "期待", "Anxiety": "不安", "Awe": "畏敬",
-    "Contempt": "軽蔑", "Curiosity": "好奇心", "Cynicism": "冷笑", "Delight": "歓喜",
-    "Despair": "絶望", "Disappointment": "失望", "Disgust": "嫌悪", "Dominance": "優位",
-    "Envy": "羨望", "Fear": "恐れ", "Guilt": "自責", "Hope": "希望", "Joy": "喜び",
-    "Love": "愛", "Optimism": "楽観", "Outrage": "憤慨", "Pessimism": "悲観",
-    "Pride": "誇り", "Remorse": "後悔", "Sadness": "悲しみ", "Sentimentality": "感傷",
-    "Shame": "恥", "Surprise": "驚き", "Trust": "信頼", "Unbelief": "不信",
-    "Aggressiveness": "積極性"
+    "Joy": "喜び", "Anticipation": "期待", "Anger": "怒り", "Disgust": "嫌悪",
+    "Sadness": "悲しみ", "Surprise": "驚き", "Fear": "恐れ", "Trust": "信頼",
+    "Optimism": "楽観", "Pride": "誇り", "病的状態": "病的状態", "Aggressiveness": "積極性",
+    "Cynicism": "冷笑", "Pessimism": "悲観", "Contempt": "軽蔑", "Envy": "羨望",
+    "Outrage": "憤慨", "Guilt": "自責", "Unbelief": "不信", "Shame": "恥",
+    "Disappointment": "失望", "Despair": "絶望", "Sentimentality": "感傷", "Awe": "畏敬",
+    "Curiosity": "好奇心", "Delight": "歓喜", "服従": "服従", "Remorse": "罪悪感",
+    "Anxiety": "不安", "Love": "愛", "Hope": "希望", "Dominance": "優位"
 }
 
 def translate_emotion(emotion):
@@ -33,6 +33,13 @@ def load_index():
     except Exception as e:
         print(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
         return []
+
+def normalize_composition_vector(partial_composition: dict) -> dict:
+    """
+    受け取った構成比（部分的）を emotion_map 順に整形（不足は0で埋める）
+    """
+    return {jp_emotion: partial_composition.get(jp_emotion, 0) for jp_emotion in emotion_map.values()}
+
 
 def load_and_categorize_index():
     print("📂 [STEP] インデックスをカテゴリごとに分類します...")
