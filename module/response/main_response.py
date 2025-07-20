@@ -8,6 +8,8 @@ import os
 from bson import ObjectId
 from utils import summarize_feeling
 
+from module.mongo.mongo_client import get_mongo_client  # 新たな統一モジュールを使用
+
 client = get_mongo_client()
 if client is None:
     raise ConnectionError("[ERROR] MongoDBクライアントの取得に失敗しました")
@@ -15,6 +17,11 @@ db = client["emotion_db"]
 
 def get_mongo_collection(category, emotion_label):
     try:
+        client = get_mongo_client()
+        if client is None:
+            raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+
+        db = client["emotion_db"]
         collection_name = f"{category}_{emotion_label}"
         return db[collection_name]
     except Exception as e:
