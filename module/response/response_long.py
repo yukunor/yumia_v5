@@ -1,5 +1,33 @@
 import json
 from utils import logger  # 共通ロガーをインポート
+from module.mongo.mongo_client import get_mongo_client
+from bson import ObjectId
+
+def get_all_long_category_data():
+    try:
+        client = get_mongo_client()
+        if client is None:
+            raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+
+        db = client["emotion_db"]
+        collection = db["emotion_data"]
+
+        # 🔍 category: "long" のみを抽出
+        long_data = list(collection.find({"category": "long"}))
+        logger.info(f"✅ longカテゴリのデータ件数: {len(long_data)}")
+        return long_data
+
+    except Exception as e:
+        logger.error(f"[ERROR] longカテゴリデータの取得失敗: {e}")
+        return []
+
+
+
+
+
+
+
+
 
 def load_emotion_by_date(path: str, target_date: str) -> dict | None:
     try:
