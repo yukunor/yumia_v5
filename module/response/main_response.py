@@ -21,6 +21,10 @@ def get_mongo_collection(category, emotion_label):
         logger.error(f"[ERROR] MongoDBコレクション取得失敗: {e}")
         return None
 
+def find_response_by_emotion(emotion_structure: dict) -> dict:
+    composition = emotion_structure.get("構成比", {})
+    keywords = emotion_structure.get("keywords", [])
+
 
 def load_emotion_by_date(path, target_date):
     if path.startswith("mongo/"):
