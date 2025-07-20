@@ -1,59 +1,60 @@
 import json
-from utils import logger  # 共通ロガーをインポート
+from utils import logger
+from module.mongo.mongo_client import get_mongo_client
+from bson import ObjectId
 
-def load_emotion_by_date(path: str, target_date: str) -> dict | None:
+def get_all_intermediate_category_data():
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        client = get_mongo_client()
+        if client is None:
+            raise ConnectionError("MongoDBクライアントの取得に失敗しました")
 
-            if isinstance(data, list):
-                for entry in data:
-                    if entry.get("date") == target_date:
-                        return entry
+        db = client["emotion_db"]
+        collection = db["emotion_data"]
 
-            elif isinstance(data, dict) and "履歴" in data:
-                for entry in data["履歴"]:
-                    if entry.get("date") == target_date:
-                        return entry
+        # 🔍 category: "intermediate" のみを抽出
+        data = list(collection.find({"category": "intermediate"}))
+        logger.info(f"✅ intermediateカテゴリのデータ件数: {len(data)}")
+        return data
 
     except Exception as e:
-        logger.warning(f"[WARN] データ取得失敗: {path} ({e})")
-    return None
+        logger.error(f"[ERROR] intermediateカテゴリデータの取得失敗: {e}")
+        return []
 
-def compute_composition_difference(comp1, comp2):
-    keys = set(k for k in comp1.keys() | comp2.keys())
-    diff_sum = sum(abs(comp1.get(k, 0) - comp2.get(k, 0)) for k in keys)
-    return diff_sum
+def extract_intermediate_summary(best_match: dict) -> dict:
+    if not best_match or best_match.get("category") != "intermediate":
+        return {}
 
-def match_intermediate_keywords(now_emotion: dict, index_data: list) -> list:
-    logger.info(f"[構成比一致度優先] intermediateカテゴリ: {len(index_data)}件をスコアリング中...")
-    results = []
+    return {
+        "date": best_match.get("date"),
+        "emotion": best_match.get("emotion"),
+        "category": best_match.get("category")
+    }
 
-    current_composition = now_emotion.get("構成比", {})
-    input_keywords = set(now_emotion.get("keywords", []))
+def find_intermediate_history_by_emotion_and_date(emotion_name, category_name, target_date):
+    client = get_mongo_client()
+    db = client["emotion_db"]
+    collection = db["emotion_data"]
 
-    for item in index_data:
-        path = item.get("保存先")
-        date = item.get("date")
-        target_emotion = load_emotion_by_date(path, date)
-        if not target_emotion:
-            continue
+    try:
+        base_doc = collection.find_one({
+            "emotion": emotion_name,
+            "category": category_name
+        })
 
-        target_composition = target_emotion.get("構成比", {})
-        diff_score = compute_composition_difference(current_composition, target_composition)
+        if not base_doc:
+            logger.warning("❌ 指定されたemotionとcategoryの組み合わせが見つかりません（intermediate）")
+            return None
 
-        target_keywords = set(target_emotion.get("keywords", []))
-        matched_keywords = list(input_keywords & target_keywords)
+        history_list = base_doc.get("data", {}).get("履歴", [])
+        for record in history_list:
+            if record.get("date") == target_date:
+                logger.info("✅ 感情履歴の一致データを発見（intermediate）")
+                return record
 
-        if matched_keywords:
-            results.append({
-                "emotion": target_emotion,
-                "matched_keywords": matched_keywords,
-                "match_score": diff_score,
-                "match_category": "intermediate",
-                "保存先": path,
-                "date": date
-            })
+        logger.info("🔍 emotionとcategoryは一致したが、dateの一致は見つかりませんでした（intermediate）")
+        return None
 
-    results.sort(key=lambda x: x["match_score"])
-    return results[:3]
+    except Exception as e:
+        logger.error(f"[ERROR] intermediateカテゴリ履歴検索中にエラー発生: {e}")
+        return None
