@@ -16,8 +16,18 @@ emotion_map = {
     "Anxiety": "不安", "Love": "愛", "Hope": "希望", "Dominance": "優位"
 }
 
-def translate_emotion(emotion):
+def search_index_response(composition: dict, keywords: list[str]) -> dict:　#検索用の構成比とキーワードの受取
+    composition = emotion_structure.get("構成比", {})
+    keywords = emotion_structure.get("keywords", [])
+
+def translate_emotion(emotion):　　#英語の感情名を日本語に変換
     return emotion_map.get(emotion, emotion)
+
+def normalize_composition_vector(partial_composition: dict) -> dict:　
+    """
+    受け取った構成比（部分的）を emotion_map 順に整形（不足は0で埋める）
+    """
+    return {jp_emotion: partial_composition.get(jp_emotion, 0) for jp_emotion in emotion_map.values()}
 
 def load_index():
     print("📥 [STEP] MongoDBからemotion_indexを取得します...")
@@ -34,14 +44,7 @@ def load_index():
         print(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
         return []
 
-def normalize_composition_vector(partial_composition: dict) -> dict:
-    """
-    受け取った構成比（部分的）を emotion_map 順に整形（不足は0で埋める）
-    """
-    return {jp_emotion: partial_composition.get(jp_emotion, 0) for jp_emotion in emotion_map.values()}
-
-
-def load_and_categorize_index():
+def load_and_categorize_index():　#取得したemotion_db.emotion_indexをcategoryごとに分類分け
     print("📂 [STEP] インデックスをカテゴリごとに分類します...")
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
@@ -56,25 +59,13 @@ def load_and_categorize_index():
 
     return categorized
 
-def compute_composition_difference(comp1, comp2):
-    keys = set(k for k in comp1.keys() | comp2.keys())
-    return sum(abs(comp1.get(k, 0) - comp2.get(k, 0)) for k in keys)
-
-def filter_by_keywords(index_data, input_keywords):
+def filter_by_keywords(index_data, input_keywords):　#カテゴライズした辞書形式のemotion_indexからキーワード検索を実施
     print(f"🔍 キーワードフィルタ適用: {input_keywords}")
     filtered = [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
     print(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
-def calculate_composition_score(base_comp: dict, target_comp: dict) -> float:
-    score = 0.0
-    for key in base_comp:
-        if key in target_comp:
-            diff = abs(base_comp[key] - target_comp[key])
-            score += max(0, 100 - diff)
-    return score
-
-def find_best_match_by_composition(current_composition, candidates):
+def find_best_match_by_composition(current_composition, candidates):　#long、short、intermediateから類似感情を1つずつ抽出
     print(f"🔎 構成比マッチング対象数: {len(candidates)}")
 
     def is_valid_candidate(candidate_comp, base_comp):
@@ -106,38 +97,3 @@ def find_best_match_by_composition(current_composition, candidates):
     jp_emotion = translate_emotion(best.get("emotion", "Unknown"))
     print(f"🏅 最も構成比が近い候補を選出: {jp_emotion}")
     return best
-
-def extract_best_reference(current_emotion, index_data, category):
-    print(f"\n============================")
-    print(f"📘 [カテゴリ: {category}] 参照候補の抽出開始")
-
-    input_keywords = current_emotion.get("keywords", [])
-    matched = filter_by_keywords(index_data, input_keywords)
-
-    if not matched:
-        print(f"🟨 {category}カテゴリ: キーワード一致なし → スキップ")
-        print("============================")
-        return None
-
-    best_match = find_best_match_by_composition(current_emotion.get("構成比", {}), matched)
-
-    if best_match:
-        jp_emotion = translate_emotion(best_match.get("emotion", "Unknown"))
-        print(f"✅ {category}カテゴリ: ベストマッチが見つかりました → {jp_emotion}")
-        print("============================")
-        save_path = best_match.get("保存先", f"mongo/{category}/{best_match.get('emotion', 'Unknown')}")
-
-        result = {
-            "emotion": best_match,
-            "source": f"{category}-match",
-            "match_info": f"キーワード一致（{', '.join(input_keywords)}）",
-            "保存先": save_path,
-            "date": best_match.get("date")
-        }
-
-        return result
-
-    print(f"🟥 {category}カテゴリ: 一致はあるが構成比が合致しない")
-    print("============================")
-    return None
-
