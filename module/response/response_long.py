@@ -21,7 +21,18 @@ def get_all_long_category_data():
         logger.error(f"[ERROR] longカテゴリデータの取得失敗: {e}")
         return []
 
+def extract_long_summary(best_match: dict) -> dict:
+    """
+    best_match から long カテゴリに該当する場合に必要な情報を抽出する。
+    """
+    if not best_match or best_match.get("category") != "long":
+        return {}
 
+    return {
+        "date": best_match.get("date"),
+        "emotion": best_match.get("emotion"),
+        "category": best_match.get("category")
+    }
 
 
 
