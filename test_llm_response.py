@@ -8,15 +8,11 @@ from llm.llm_client import (
     generate_emotion_from_prompt_with_context,
     extract_emotion_summary
 )
-from memory.current_emotion import load_current_emotion  # 現在の気分ベクトルを取得
 
 if __name__ == "__main__":
     user_input = "今日はなんだか不安な気分です。"
+    current_emotion = {}  # ← 自分で明示。何も引き継がない
 
-    # 現在の感情状態を取得（ミキシングに使う前提）
-    current_emotion = load_current_emotion()
-
-    print("🔍 LLM応答と感情構造の取得を開始...")
     response, emotion_data = generate_emotion_from_prompt_with_context(user_input, current_emotion)
 
     print("\n=== 🗣 応答内容 ===")
