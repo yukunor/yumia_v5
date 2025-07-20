@@ -1,9 +1,7 @@
-# test_llm_response.py
-
 import sys
 import os
 
-# モジュールパス追加
+# カレントディレクトリをPYTHONPATHに追加（Renderでは必須）
 sys.path.append(os.path.dirname(__file__))
 
 from module.llm.llm_client import (
