@@ -8,6 +8,10 @@ import os
 from bson import ObjectId
 from utils import summarize_feeling
 
+
+from module.response.response_long import find_history_by_emotion_and_date as find_long
+from module.response.response_short import find_history_by_emotion_and_date as find_short
+from module.response.response_intermediate import find_history_by_emotion_and_date as find_intermediate
 from module.mongo.mongo_client import get_mongo_client  # 新たな統一モジュールを使用
 
 client = get_mongo_client()
@@ -28,12 +32,26 @@ def get_mongo_collection(category, emotion_label):
         logger.error(f"[ERROR] MongoDBコレクション取得失敗: {e}")
         return None
 
-def find_response_by_emotion(emotion_structure: dict) -> dict:　#LLMの初期応答で取得したキーワードと感情構成比
+def find_response_by_emotion(emotion_structure: dict) -> dict:　#LLMの初期応答で取得したキーワードと感情構成比、各responceで処理
     composition = emotion_structure.get("構成比", {})
     keywords = emotion_structure.get("keywords", [])
 
+def collect_all_category_responses(emotion_name: str, date_str: str) -> dict:
+    """
+    各カテゴリ（short → intermediate → long）から指定された感情名と日付に一致する履歴を取得する。
+    """
+    short_data = find_short(emotion_name, "short", date_str)
+    intermediate_data = find_intermediate(emotion_name, "intermediate", date_str)
+    long_data = find_long(emotion_name, "long", date_str)
+
+    return {
+        "short": short_data,
+        "intermediate": intermediate_data,
+        "long": long_data
+    }
 
 
+#↑7/20ここまで
 
 
 
