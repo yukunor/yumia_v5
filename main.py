@@ -2,20 +2,19 @@ import sys
 import os
 import re
 import traceback
-
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from pydantic import BaseModel
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
+
 
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
-
-from utils import append_history, load_history, logger
+from module.utils.utils import load_history, logger, append_history
 from module.response.main_response import run_response_pipeline
 import module.memory.main_memory as memory
 from llm_client import extract_emotion_summary
 from module.memory.index_emotion import extract_personality_tendency
-from module.file_handler.file_router import handle_uploaded_file
+
 
 app = FastAPI()
 
