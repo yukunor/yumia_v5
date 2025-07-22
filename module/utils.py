@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 import certifi
 import json
 import openai
+from pymongo import DESCENDING
+from module.mongo.mongo_client import get_mongo_client
+
 
 # Renderの環境変数からOpenAIのAPIキーを取得
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -19,6 +22,29 @@ if not logger.hasHandlers():
     logger.setLevel(logging.INFO)
     logger.addHandler(handler)
 
+
+#　履歴を取得しWeb UI上に100件を上限として表示
+def load_history(limit: int = 100) -> list[dict]:
+    """
+    MongoDBのdialogue_historyから、timestampが新しい順に最大limit件の履歴を取得する。
+    """
+    client = get_mongo_client()
+    if client is None:
+        raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+
+    db = client["emotion_db"]
+    collection = db["dialogue_history"]
+
+    # timestampで降順ソート → 新しい順にlimit件取得
+    cursor = collection.find().sort("timestamp", DESCENDING).limit(limit)
+
+    history = []
+    for doc in cursor:
+        history.append({
+            "timestamp": doc.get("timestamp"),
+            "role": doc.get("role"),
+            "message": doc.get("message")
+        })
 
 # 会話履歴：保存
 def append_history(role, message):
