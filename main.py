@@ -68,6 +68,10 @@ async def chat(
         summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
         logger.info(f"📊 構成比サマリ: {summary}")
 
+
+
+
+        
         logger.debug("💬 最終応答内容（そのまま表示）:")
         logger.debug(f"💭{response}")
         cleaned = summary.replace(f"（主感情: {emotion_data.get('主感情')}｜構成比: ", "").rstrip("）")
