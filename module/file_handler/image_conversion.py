@@ -7,6 +7,8 @@ from pdf2image import convert_from_path
 from PIL import Image, ImageDraw, ImageFont
 from docx import Document
 
+from module. file_router import route_file_for_processing
+
 TEMP_IMAGE_DIR = "temp_images"
 os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
 
