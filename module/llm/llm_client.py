@@ -5,24 +5,12 @@ import json
 import os
 from datetime import datetime
 
-from utils import (
-    load_system_prompt_cached,
-    load_emotion_prompt,
-    load_dialogue_prompt,
-    logger
-)
+from module.utils.utils import load_history, load_system_prompt_cached, load_emotion_prompt, load_dialogue_prompt, logger
+from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI_MAX_TOKENS
 
-from module.memory.oblivion_emotion import clean_old_emotions
-from module.context.context_selector import select_contextual_history  # ← 未使用（将来用）
-from module.memory.index_emotion import extract_personality_tendency
 from module.mongo.emotion_dataset import get_recent_dialogue_history
-from module.params import (
-    OPENAI_MODEL,
-    OPENAI_TEMPERATURE,
-    OPENAI_TOP_P,
-    OPENAI_MAX_TOKENS
-)
 
+#from module.memory.oblivion_emotion import clean_old_emotions
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
@@ -38,7 +26,7 @@ def generate_gpt_response_from_history() -> str:
 
     # 履歴取得（直近3件）
     logger.info("[INFO] 履歴取得中...")
-    selected_history = get_recent_dialogue_history(3)
+    selected_history = load_history(3)
     logger.info(f"[INFO] 履歴件数: {len(selected_history)} 件")
 
     try:
