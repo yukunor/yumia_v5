@@ -3,8 +3,6 @@ import shutil
 from uuid import uuid4
 from fastapi import UploadFile
 
-from module.file_handler.image_conversion import convert_to_images  # 修正済：正しい関数名
-
 # 最大一時保存ファイル数
 MAX_TEMP_FILES = 3
 
