@@ -1,9 +1,14 @@
 import json
-from utils import logger
-from module.mongo.mongo_client import get_mongo_client
 from bson import ObjectId
 
-def get_all_short_category_data():
+from module.mongo.mongo_client import get_mongo_client
+from module.responce.responxe_index import find_best_match_by_composition
+from module.utils.utils import logger
+
+ef get_all_short_category_data():
+    """
+    MongoDBのemotion_dataから、categoryが"short"の全データを取得する。
+    """
     try:
         client = get_mongo_client()
         if client is None:
@@ -12,7 +17,6 @@ def get_all_short_category_data():
         db = client["emotion_db"]
         collection = db["emotion_data"]
 
-        # 🔍 category: "short" のみを抽出
         short_data = list(collection.find({"category": "short"}))
         logger.info(f"✅ shortカテゴリのデータ件数: {len(short_data)}")
         return short_data
@@ -21,40 +25,19 @@ def get_all_short_category_data():
         logger.error(f"[ERROR] shortカテゴリデータの取得失敗: {e}")
         return []
 
-def extract_short_summary(best_match: dict) -> dict:
-    if not best_match or best_match.get("category") != "short":
-        return {}
 
-    return {
-        "date": best_match.get("date"),
-        "emotion": best_match.get("emotion"),
-        "category": best_match.get("category")
-    }
+def search_short_history(all_data, emotion_name, category_name, target_date):
+    """
+    取得済みshortデータ群から、emotion・category・dateが一致する履歴1件を探して返す。
+    MongoDBを再度呼び出さずにローカル検索のみで完結。
+    """
+    for item in all_data:
+        if item.get("emotion") == emotion_name and item.get("category") == category_name:
+            history_list = item.get("data", {}).get("履歴", [])
+            for record in history_list:
+                if record.get("date") == target_date:
+                    logger.info("✅ 感情履歴の一致データを発見（short）")
+                    return record
 
-def find_short_history_by_emotion_and_date(emotion_name, category_name, target_date):
-    client = get_mongo_client()
-    db = client["emotion_db"]
-    collection = db["emotion_data"]
-
-    try:
-        base_doc = collection.find_one({
-            "emotion": emotion_name,
-            "category": category_name
-        })
-
-        if not base_doc:
-            logger.warning("❌ 指定されたemotionとcategoryの組み合わせが見つかりません")
-            return None
-
-        history_list = base_doc.get("data", {}).get("履歴", [])
-        for record in history_list:
-            if record.get("date") == target_date:
-                logger.info("✅ 感情履歴の一致データを発見（short）")
-                return record
-
-        logger.info("🔍 emotionとcategoryは一致したが、dateの一致は見つかりませんでした（short）")
-        return None
-
-    except Exception as e:
-        logger.error(f"[ERROR] shortカテゴリ履歴検索中にエラー発生: {e}")
-        return None
+    logger.info("🔍 emotion/categoryは一致したが、dateの一致は見つかりませんでした（short）")
+    return None
