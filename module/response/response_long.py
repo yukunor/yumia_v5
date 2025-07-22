@@ -4,6 +4,9 @@ from module.mongo.mongo_client import get_mongo_client
 from bson import ObjectId
 
 def get_all_long_category_data():
+    """
+    MongoDBのemotion_dataから、categoryが"long"の全データを取得する。
+    """
     try:
         client = get_mongo_client()
         if client is None:
@@ -12,7 +15,6 @@ def get_all_long_category_data():
         db = client["emotion_db"]
         collection = db["emotion_data"]
 
-        # 🔍 category: "long" のみを抽出
         long_data = list(collection.find({"category": "long"}))
         logger.info(f"✅ longカテゴリのデータ件数: {len(long_data)}")
         return long_data
@@ -21,45 +23,22 @@ def get_all_long_category_data():
         logger.error(f"[ERROR] longカテゴリデータの取得失敗: {e}")
         return []
 
-def extract_long_summary(best_match: dict) -> dict:
+
+def search_long_history(all_data, emotion_name, category_name, target_date):
     """
-    best_match から long カテゴリに該当する場合に必要な情報を抽出する。
+    取得済みlongデータ群から、emotion・category・dateが一致する履歴1件を探して返す。
+    MongoDBを再度呼び出さずにローカル検索のみで完結。
     """
-    if not best_match or best_match.get("category") != "long":
-        return {}
+    for item in all_data:
+        if item.get("emotion") == emotion_name and item.get("category") == category_name:
+            history_list = item.get("data", {}).get("履歴", [])
+            for record in history_list:
+                if record.get("date") == target_date:
+                    logger.info("✅ 感情履歴の一致データを発見（long）")
+                    return record
 
-    return {
-        "date": best_match.get("date"),
-        "emotion": best_match.get("emotion"),
-        "category": best_match.get("category")
-    }
-
-
-def find_history_by_emotion_and_date(emotion_name, category_name, target_date):
-    client = get_mongo_client()
-    db = client["emotion_db"]
-    collection = db["emotion_data"]
-
-    try:
-        # ステップ①: emotion と category で候補を絞る
-        base_doc = collection.find_one({
-            "emotion": emotion_name,
-            "category": category_name
-        })
-
-        if not base_doc:
-            logger.warning("❌ 指定されたemotionとcategoryの組み合わせが見つかりません")
-            return None
-
-        # ステップ②: data.履歴 から date 一致を検索
-        history_list = base_doc.get("data", {}).get("履歴", [])
-        for record in history_list:
-            if record.get("date") == target_date:
-                logger.info("✅ 感情履歴の一致データを発見")
-                return record
-
-        logger.info("🔍 emotionとcategoryは一致したが、dateの一致は見つかりませんでした")
-        return None
+    logger.info("🔍 emotion/categoryは一致したが、dateの一致は見つかりませんでした（long）")
+    return None
 
     except Exception as e:
         logger.error(f"[ERROR] 感情履歴検索中にエラー発生: {e}")
