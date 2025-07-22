@@ -9,11 +9,9 @@ from pydantic import BaseModel
 
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
+from module.llm.llm_client import generate_emotion_from_prompt_with_context
 from module.utils.utils import load_history, logger, append_history
-from module.response.main_response import run_response_pipeline
-import module.memory.main_memory as memory
-from llm_client import extract_emotion_summary
-from module.memory.index_emotion import extract_personality_tendency
+
 
 
 app = FastAPI()
