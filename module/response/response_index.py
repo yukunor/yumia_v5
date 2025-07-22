@@ -1,4 +1,4 @@
-#module/responce/responce_index.py
+#module/response/response_index.py
 import json
 import os
 import re
