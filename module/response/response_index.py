@@ -2,8 +2,12 @@
 import json
 import os
 import re
-from utils import logger, get_mongo_client
 from bson import ObjectId
+
+from module.utils.utils import logger
+from module.mongo.mongo_client import get_mongo_client
+from module.llm.llm_client import generate_gpt_response_from_history
+
 
 # 英語→日本語変換辞書
 emotion_map = {
