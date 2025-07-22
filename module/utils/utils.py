@@ -52,6 +52,25 @@ def load_history(limit=100):
         logger.error(f"[ERROR] 履歴の読み込みに失敗: {e}")
         return []
 
+# プロンプト読み込み関連
+def load_emotion_prompt():
+    with open("prompt/emotion_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def load_dialogue_prompt():
+    with open("prompt/dialogue_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+_cached_system_prompt = None
+
+def load_system_prompt_cached():
+    global _cached_system_prompt
+    if _cached_system_prompt is None:
+        with open("prompt/system_prompt.txt", "r", encoding="utf-8") as f:
+            _cached_system_prompt = f.read().strip()
+    return _cached_system_prompt
+
+
 # 現在感情：読み込み
 def load_current_emotion():
     try:
@@ -107,23 +126,6 @@ def merge_emotion_vectors(
 
     return combined
 
-# プロンプト読み込み関連
-def load_emotion_prompt():
-    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-def load_dialogue_prompt():
-    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-_cached_system_prompt = None
-
-def load_system_prompt_cached():
-    global _cached_system_prompt
-    if _cached_system_prompt is None:
-        with open("system_prompt.txt", "r", encoding="utf-8") as f:
-            _cached_system_prompt = f.read().strip()
-    return _cached_system_prompt
 
 # 32感情ベクトル → 6感情要約
 def summarize_feeling(feeling_vector: dict) -> dict:
