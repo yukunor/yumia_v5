@@ -46,6 +46,25 @@ def load_history(limit: int = 100) -> list[dict]:
             "message": doc.get("message")
         })
 
+# プロンプト読み込み関連
+def load_emotion_prompt():
+    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def load_dialogue_prompt():
+    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+_cached_system_prompt = None
+
+def load_system_prompt_cached():
+    global _cached_system_prompt
+    if _cached_system_prompt is None:
+        with open("system_prompt.txt", "r", encoding="utf-8") as f:
+            _cached_system_prompt = f.read().strip()
+    return _cached_system_prompt
+    
+
 # 会話履歴：保存
 def append_history(role, message):
     try:
@@ -62,22 +81,6 @@ def append_history(role, message):
             logger.info(f"[INFO] 履歴をMongoDBに保存: {entry}")
     except Exception as e:
         logger.error(f"[ERROR] 履歴保存に失敗: {e}")
-
-# 会話履歴：読み込み
-def load_history(limit=100):
-    try:
-        client = get_mongo_client()
-        if client:
-            db = client["emotion_db"]
-            collection = db["dialogue_history"]
-            entries = list(collection.find().sort("timestamp", -1).limit(limit))
-            for entry in entries:
-                if "_id" in entry:
-                    entry["_id"] = str(entry["_id"])
-            return list(reversed(entries))
-    except Exception as e:
-        logger.error(f"[ERROR] 履歴の読み込みに失敗: {e}")
-        return []
 
 # 現在感情：読み込み
 def load_current_emotion():
@@ -134,23 +137,7 @@ def merge_emotion_vectors(
 
     return combined
 
-# プロンプト読み込み関連
-def load_emotion_prompt():
-    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
 
-def load_dialogue_prompt():
-    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-_cached_system_prompt = None
-
-def load_system_prompt_cached():
-    global _cached_system_prompt
-    if _cached_system_prompt is None:
-        with open("system_prompt.txt", "r", encoding="utf-8") as f:
-            _cached_system_prompt = f.read().strip()
-    return _cached_system_prompt
 
 # 32感情ベクトル → 6感情要約
 def summarize_feeling(feeling_vector: dict) -> dict:
