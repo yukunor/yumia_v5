@@ -1,19 +1,14 @@
 #module/responce/main_responce.py
-from llm_client import generate_emotion_from_prompt_simple as estimate_emotion, generate_emotion_from_prompt_with_context, extract_emotion_summary
-from response.response_index import load_and_categorize_index, extract_best_reference, find_best_match_by_composition
-from utils import logger, get_mongo_client, load_current_emotion, save_current_emotion, merge_emotion_vectors
-from module.memory.main_memory import handle_emotion, save_emotion_sample, append_emotion_history, pad_emotion_vector
-from module.memory.emotion_stats import synthesize_current_emotion
 import json
 import os
 from bson import ObjectId
-from utils import summarize_feeling
 
-
-from module.response.response_long import find_history_by_emotion_and_date as find_long
-from module.response.response_short import find_history_by_emotion_and_date as find_short
-from module.response.response_intermediate import find_history_by_emotion_and_date as find_intermediate
-from module.mongo.mongo_client import get_mongo_client  # 新たな統一モジュールを使用
+from module.mongo.mongo_client import get_mongo_client
+from module.llm.llm_crient import generate_gpt_response_from_history
+from module.response.response_short import find_short_history_by_emotion_and_date 
+from module.response.response_intermediate import find_intermediate_history_by_emotion_and_date
+from module.response.response_long import find_long_history_by_emotion_and_date
+from module.utils.utils import logger
 
 client = get_mongo_client()
 if client is None:
