@@ -51,31 +51,37 @@ async def chat(
     print(f"📌 loggerの型: {type(logger)}")
     logger.debug("✅ /chat エンドポイントに到達")
     print("✅ debug() 実行済み", flush=True)
+
     try:
         user_input = message
-        logger.debug(f"ユーザー入力取得完了: {user_input}")
+        logger.debug(f"📥 ユーザー入力取得完了: {user_input}")
 
-        # 添付ファイル処理
+        # 🔸 添付ファイルの内容を抽出し user_input に追加
         if file:
             logger.debug(f"📎 添付ファイル名: {file.filename}")
             extracted_text = await handle_uploaded_file(file)
             if extracted_text:
                 user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
 
-        # 履歴に追加
+        # 🔸 履歴に保存
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        # 応答生成（構成比も返却）
-        response_text, composition_vector = run_emotion_update_pipeline(user_input)
+        # 🔸 感情推定と応答生成
+        response_text, emotion_data = generate_emotion_from_prompt_with_context(user_input)
         logger.debug("🧾 応答生成完了")
 
-        # 🔹 6感情サマリー表示
-        if composition_vector:
-            summary = summarize_feeling(composition_vector)
+        # 🔸 感情構成比の抽出と保存・サマリー処理
+        composition = emotion_data.get("構成比", {})
+        update_message, summary = run_emotion_update_pipeline(composition)
+
+        # 🔸 ログ出力（6感情サマリー）
+        if summary:
             logger.info("🧠 感情サマリー:")
             for k, v in summary.items():
                 logger.info(f"  {k}: {v}")
+
+        return {"response": response_text, "summary": summary}
 
     except Exception as e:
         logger.error(f"❌ エラー発生: {e}")
