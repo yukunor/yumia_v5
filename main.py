@@ -13,6 +13,7 @@ from module.llm.llm_client import generate_emotion_from_prompt_with_context
 from module.utils.utils import load_history, logger, append_history
 from module.emotion.main_emotion import save_response_to_memory
 from module.emotion.emotion_stats import summarize_feeling
+from module.llm.llm_client import run_response_pipeline
 
 
 
