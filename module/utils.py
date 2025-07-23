@@ -61,6 +61,7 @@ print("📌 [STEP] MongoLogger クラス定義完了")
 logger = MongoLogger()
 print(f"📌 [CHECK] logger の型: {type(logger)}")
 
+logger = MongoLogger() 
 
 #　履歴を取得しWeb UI上に100件を上限として表示
 def load_history(limit: int = 100) -> list[dict]:
