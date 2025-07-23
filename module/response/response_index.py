@@ -49,7 +49,7 @@ def load_index():
         print(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
         return []
 
-def load_and_categorize_index():　#取得したemotion_db.emotion_indexをcategoryごとに分類分け
+def load_and_categorize_index(): #取得したemotion_db.emotion_indexをcategoryごとに分類分け
     print("📂 [STEP] インデックスをカテゴリごとに分類します...")
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
