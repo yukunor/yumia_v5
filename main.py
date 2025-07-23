@@ -11,7 +11,7 @@ from pydantic import BaseModel
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 from module.llm.llm_client import generate_emotion_from_prompt_with_context
 from module.utils.utils import load_history, logger, append_history
-from module.emotion.main_memory import save_response_to_memory
+from module.emotion.main_emotion import save_response_to_memory
 from module.emotion.emotion_stats import summarize_feeling
 
 
