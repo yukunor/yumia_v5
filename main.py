@@ -72,11 +72,6 @@ async def chat(
             for k, v in summary.items():
                 logger.info(f"  {k}: {v}")
 
-        # 応答データを非同期で保存
-        background_tasks.add_task(save_response_to_memory, response_text)
-
-        return PlainTextResponse(response_text)
-
     except Exception as e:
         logger.error(f"❌ エラー発生: {e}")
         return PlainTextResponse("エラーが発生しました。", status_code=500)
