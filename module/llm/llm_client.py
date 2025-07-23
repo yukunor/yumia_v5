@@ -169,16 +169,14 @@ def generate_emotion_from_prompt_with_context(
             top_p=OPENAI_TOP_P
         )
         full_response = response.choices[0].message.content.strip()
-        json_match = re.search(r"
-json\s*(\{.*?\})\s*
-", full_response, re.DOTALL)
+
+        # ✅ JSON部分だけ抽出
+        json_match = re.search(r"```json\s*(\{.*?\})\s*```", full_response, re.DOTALL)
         if json_match:
             try:
                 emotion_data = json.loads(json_match.group(1))
                 emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
-                clean_response = re.sub(r"
-json\s*\{.*?\}\s*
-", "", full_response, flags=re.DOTALL).strip()
+                clean_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
 
                 # 🔸 非同期スレッドで感情統合処理を実行
                 if "構成比" in emotion_data:
