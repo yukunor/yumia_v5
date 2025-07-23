@@ -6,20 +6,15 @@ import certifi
 import json
 import openai
 from pymongo import DESCENDING
-from module.mongo.mongo_client import get_mongo_client
-
 
 print("📌 [STEP] utils.py 読み込み開始")
 
-# Renderの環境変数からOpenAIのAPIキーを取得
+# OpenAI APIキーの読み込み
 openai.api_key = os.getenv("OPENAI_API_KEY")
 print(f"📌 [ENV] OPENAI_API_KEY 読み込み結果: {'あり' if openai.api_key else 'なし'}")
 
-
-# ログレベルのしきい値（必要に応じて "DEBUG" などに変更可能）
+# ログレベル設定
 LOG_LEVEL_THRESHOLD = "DEBUG"  # "DEBUG", "INFO", "WARNING", "ERROR"
-
-# ログレベルの優先度
 LEVEL_ORDER = {
     "DEBUG": 10,
     "INFO": 20,
@@ -27,7 +22,25 @@ LEVEL_ORDER = {
     "ERROR": 40
 }
 
-# MongoDBへログを保存
+# MongoLoggerの定義とインスタンス生成（← 最優先で定義）
+class MongoLogger:
+    def log(self, level: str, message: str):
+        print(f"[LOG WRAPPER] 呼び出しレベル: {level} / 閾値: {LOG_LEVEL_THRESHOLD}")
+        if LEVEL_ORDER[level] >= LEVEL_ORDER[LOG_LEVEL_THRESHOLD]:
+            log_to_mongo(level, message)
+
+    def debug(self, message: str): self.log("DEBUG", message)
+    def info(self, message: str): self.log("INFO", message)
+    def warning(self, message: str): self.log("WARNING", message)
+    def error(self, message: str): self.log("ERROR", message)
+
+logger = MongoLogger()
+print(f"📌 [CHECK] logger の型: {type(logger)}")
+
+# MongoDBクライアント（← logger 初期化後にインポート）
+from module.mongo.mongo_client import get_mongo_client
+
+# MongoDBにログを保存
 def log_to_mongo(level: str, message: str):
     print(f"[CALL] log_to_mongo: {level} - {message}")
     try:
@@ -44,37 +57,14 @@ def log_to_mongo(level: str, message: str):
     except Exception as e:
         print(f"[ERROR] MongoDBログ記録失敗: {e}")
 
-# ログラッパー（ログレベルしきい値で出力制御）
-class MongoLogger:
-    def log(self, level: str, message: str):
-        print(f"[LOG WRAPPER] 呼び出しレベル: {level} / 閾値: {LOG_LEVEL_THRESHOLD}")
-        if LEVEL_ORDER[level] >= LEVEL_ORDER[LOG_LEVEL_THRESHOLD]:
-            log_to_mongo(level, message)
-
-    def debug(self, message: str): self.log("DEBUG", message)
-    def info(self, message: str): self.log("INFO", message)
-    def warning(self, message: str): self.log("WARNING", message)
-    def error(self, message: str): self.log("ERROR", message)
-
-print("📌 [STEP] MongoLogger クラス定義完了")
-
-logger = MongoLogger()
-print(f"📌 [CHECK] logger の型: {type(logger)}")
-
-
-#　履歴を取得しWeb UI上に100件を上限として表示
+# 履歴を取得
 def load_history(limit: int = 100) -> list[dict]:
-    """
-    MongoDBのdialogue_historyから、timestampが新しい順に最大limit件の履歴を取得する。
-    """
     client = get_mongo_client()
     if client is None:
         raise ConnectionError("MongoDBクライアントの取得に失敗しました")
 
     db = client["emotion_db"]
     collection = db["dialogue_history"]
-
-    # timestampで降順ソート → 新しい順にlimit件取得
     cursor = collection.find().sort("timestamp", DESCENDING).limit(limit)
 
     history = []
@@ -84,8 +74,9 @@ def load_history(limit: int = 100) -> list[dict]:
             "role": doc.get("role"),
             "message": doc.get("message")
         })
+    return history
 
-# プロンプト読み込み関連
+# プロンプト読み込み
 def load_emotion_prompt():
     with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
         return f.read().strip()
@@ -103,8 +94,7 @@ def load_system_prompt_cached():
             _cached_system_prompt = f.read().strip()
     return _cached_system_prompt
 
-
-# 会話履歴：保存
+# 会話履歴保存
 def append_history(role, message):
     try:
         entry = {
@@ -121,6 +111,7 @@ def append_history(role, message):
     except Exception as e:
         logger.error(f"[ERROR] 履歴保存に失敗: {e}")
 
+# テスト用出力
 if __name__ == "__main__":
     print("=== Logger Test Start ===", flush=True)
     logger.debug("🌟 デバッグ動作確認")
