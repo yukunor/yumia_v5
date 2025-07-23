@@ -13,7 +13,7 @@ from module.llm.llm_client import generate_emotion_from_prompt_with_context
 from module.utils.utils import load_history, logger, append_history
 from module.emotion.main_emotion import save_response_to_memory
 from module.emotion.emotion_stats import summarize_feeling
-from module.llm.llm_client import run_response_pipeline
+from module.llm.llm_client import run_emotion_update_pipeline
 
 
 
@@ -62,7 +62,7 @@ async def chat(
         logger.debug("📝 ユーザー履歴追加完了")
 
         # 応答生成（構成比も返却）
-        response_text, composition_vector = await run_response_pipeline(user_input)
+        response_text, composition_vector = await run_emotion_update_pipeline(user_input)
         logger.debug("🧾 応答生成完了")
 
         # 🔹 6感情サマリー表示
