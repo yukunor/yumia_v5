@@ -62,7 +62,7 @@ async def chat(
         logger.debug("📝 ユーザー履歴追加完了")
 
         # 応答生成（構成比も返却）
-       response_text, composition_vector = run_emotion_update_pipeline(user_input)
+        response_text, composition_vector = run_emotion_update_pipeline(user_input)
         logger.debug("🧾 応答生成完了")
 
         # 🔹 6感情サマリー表示
