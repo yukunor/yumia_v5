@@ -21,7 +21,7 @@ emotion_map = {
     "Anxiety": "不安", "Love": "愛", "Hope": "希望", "Dominance": "優位"
 }
 
-def search_index_response(composition: dict, keywords: list[str]) -> dict:　#検索用の構成比とキーワードの受取
+def search_index_response(composition: dict, keywords: list[str]) -> dict: #検索用の構成比とキーワードの受取
     composition = emotion_structure.get("構成比", {})
     keywords = emotion_structure.get("keywords", [])
 
