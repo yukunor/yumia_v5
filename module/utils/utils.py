@@ -1,25 +1,115 @@
+#module/utils/utils.py
 import os
 from datetime import datetime
-import logging
 from dotenv import load_dotenv
 import certifi
 import json
 import openai
+from pymongo import DESCENDING
 
-# Renderの環境変数からOpenAIのAPIキーを取得
+print("📌 [STEP] utils.py 読み込み開始")
 openai.api_key = os.getenv("OPENAI_API_KEY")
+print(f"📌 [ENV] OPENAI_API_KEY 読み込み結果: {'あり' if openai.api_key else 'なし'}")
 
-# ロガー
-logger = logging.getLogger("yumia_logger")
-if not logger.hasHandlers():
-    handler = logging.FileHandler("app.log", encoding="utf-8")
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+LOG_LEVEL_THRESHOLD = "DEBUG"
+LEVEL_ORDER = {
+    "DEBUG": 10,
+    "INFO": 20,
+    "WARNING": 30,
+    "ERROR": 40
+}
 
+# ✅ log_to_mongo を最初に定義（これがないと MongoLogger の評価に使えない）
+def log_to_mongo(level: str, message: str):
+    print(f"[CALL] log_to_mongo: {level} - {message}")
+    try:
+        from module.mongo.mongo_client import get_mongo_client  # ← 遅延importで安全
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["app_log"]
+            log_entry = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": level,
+                "message": message
+            }
+            collection.insert_one(log_entry)
+    except Exception as e:
+        print(f"[ERROR] MongoDBログ記録失敗: {e}")
 
-# 会話履歴：保存
+# ✅ 先に MongoLogger を定義（log_to_mongo 使用可能に）
+class MongoLogger:
+    def log(self, level: str, message: str):
+        print(f"[LOG WRAPPER] 呼び出しレベル: {level} / 閾値: {LOG_LEVEL_THRESHOLD}")
+        if LEVEL_ORDER[level] >= LEVEL_ORDER[LOG_LEVEL_THRESHOLD]:
+            log_to_mongo(level, message)
+
+    def debug(self, message: str): self.log("DEBUG", message)
+    def info(self, message: str): self.log("INFO", message)
+    def warning(self, message: str): self.log("WARNING", message)
+    def error(self, message: str): self.log("ERROR", message)
+
+logger = MongoLogger()
+print(f"📌 [CHECK] logger の型: {type(logger)}")
+
+# MongoDBクライアント（← logger 初期化後にインポート）
+from module.mongo.mongo_client import get_mongo_client
+
+# MongoDBにログを保存
+def log_to_mongo(level: str, message: str):
+    print(f"[CALL] log_to_mongo: {level} - {message}")
+    try:
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["app_log"]
+            log_entry = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": level,
+                "message": message
+            }
+            collection.insert_one(log_entry)
+    except Exception as e:
+        print(f"[ERROR] MongoDBログ記録失敗: {e}")
+
+# 履歴を取得
+def load_history(limit: int = 100) -> list[dict]:
+    client = get_mongo_client()
+    if client is None:
+        raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+
+    db = client["emotion_db"]
+    collection = db["dialogue_history"]
+    cursor = collection.find().sort("timestamp", DESCENDING).limit(limit)
+
+    history = []
+    for doc in cursor:
+        history.append({
+            "timestamp": doc.get("timestamp"),
+            "role": doc.get("role"),
+            "message": doc.get("message")
+        })
+    return history
+
+# プロンプト読み込み
+def load_emotion_prompt():
+    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+def load_dialogue_prompt():
+    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+_cached_system_prompt = None
+
+def load_system_prompt_cached():
+    global _cached_system_prompt
+    if _cached_system_prompt is None:
+        with open("system_prompt.txt", "r", encoding="utf-8") as f:
+            _cached_system_prompt = f.read().strip()
+    return _cached_system_prompt
+
+# 会話履歴保存
 def append_history(role, message):
     try:
         entry = {
@@ -36,113 +126,9 @@ def append_history(role, message):
     except Exception as e:
         logger.error(f"[ERROR] 履歴保存に失敗: {e}")
 
-# 会話履歴：読み込み
-def load_history(limit=100):
-    try:
-        client = get_mongo_client()
-        if client:
-            db = client["emotion_db"]
-            collection = db["dialogue_history"]
-            entries = list(collection.find().sort("timestamp", -1).limit(limit))
-            for entry in entries:
-                if "_id" in entry:
-                    entry["_id"] = str(entry["_id"])
-            return list(reversed(entries))
-    except Exception as e:
-        logger.error(f"[ERROR] 履歴の読み込みに失敗: {e}")
-        return []
-
-# プロンプト読み込み関連
-def load_emotion_prompt():
-    with open("prompt/emotion_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-def load_dialogue_prompt():
-    with open("prompt/dialogue_prompt.txt", "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-_cached_system_prompt = None
-
-def load_system_prompt_cached():
-    global _cached_system_prompt
-    if _cached_system_prompt is None:
-        with open("prompt/system_prompt.txt", "r", encoding="utf-8") as f:
-            _cached_system_prompt = f.read().strip()
-    return _cached_system_prompt
-
-
-# 現在感情：読み込み
-def load_current_emotion():
-    try:
-        client = get_mongo_client()
-        if client:
-            db = client["emotion_db"]
-            collection = db["current_emotion"]
-            latest = collection.find_one(sort=[("timestamp", -1)])
-            return latest["emotion_vector"] if latest else {}
-    except Exception as e:
-        logger.error(f"[ERROR] 現在感情の読み込みに失敗: {e}")
-        return {}
-
-# 現在感情：保存
-def save_current_emotion(emotion_vector):
-    try:
-        client = get_mongo_client()
-        if client:
-            db = client["emotion_db"]
-            collection = db["current_emotion"]
-            entry = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "emotion_vector": emotion_vector
-            }
-            collection.insert_one(entry)
-            logger.info("[INFO] 現在感情をMongoDBに保存しました")
-    except Exception as e:
-        logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")
-
-# 感情ベクトルの合成（加重平均 + 減衰 + 正規化）
-def merge_emotion_vectors(
-    current: dict,
-    new: dict,
-    weight_new: float = 0.3,
-    decay_factor: float = 0.9,
-    normalize: bool = True
-) -> dict:
-    combined = {}
-    all_keys = set(current.keys()) | set(new.keys())
-    for key in all_keys:
-        old_val = current.get(key, 0)
-        new_val = new.get(key, 0)
-        if key in new:
-            merged = (1 - weight_new) * old_val + weight_new * new_val
-        else:
-            merged = old_val * decay_factor
-        combined[key] = merged
-
-    if normalize:
-        total = sum(combined.values())
-        if total > 0:
-            combined = {k: round((v / total) * 100, 2) for k, v in combined.items()}
-
-    return combined
-
-
-# 32感情ベクトル → 6感情要約
-def summarize_feeling(feeling_vector: dict) -> dict:
-    summary = {
-        "喜び": sum(feeling_vector.get(e, 0) for e in ["歓喜", "希望", "信頼", "楽観", "愛"]) / 5,
-        "怒り": sum(feeling_vector.get(e, 0) for e in ["憤慨", "軽蔑", "怒り"]) / 3,
-        "悲しみ": sum(feeling_vector.get(e, 0) for e in ["絶望", "自責", "恥", "感傷"]) / 4,
-        "楽しさ": sum(feeling_vector.get(e, 0) for e in ["好奇心", "期待", "喜び"]) / 3,
-        "自信": sum(feeling_vector.get(e, 0) for e in ["優位", "誇り"]) / 2,
-        "困惑": sum(feeling_vector.get(e, 0) for e in ["恐れ", "不信", "不安"]) / 3,
-    }
-
-    # ✅ 10点満点で換算し、四捨五入で整数化
-    summary = {k: round((v / 100) * 10) for k, v in summary.items()}
-
-    print("【6感情サマリー】")
-    for k, v in summary.items():
-        print(f"  {k}: {v}")
-
-    return summary
+# テスト用出力
+if __name__ == "__main__":
+    print("=== Logger Test Start ===", flush=True)
+    logger.debug("🌟 デバッグ動作確認")
+    logger.info("🔔 通常の情報ログ")
+    print("=== Logger Test End ===", flush=True)
