@@ -70,12 +70,22 @@ def filter_by_keywords(index_data, input_keywords): #カテゴライズした辞
     print(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
-def find_best_match_by_composition(current_composition, candidates): #long、short、intermediateから類似感情を1つずつ抽出
+def find_best_match_by_composition(current_composition, candidates):  # long、short、intermediateから類似感情を1つずつ抽出
     print(f"🔎 構成比マッチング対象数: {len(candidates)}")
+    print(f"[DEBUG] current_composition type: {type(current_composition)}")
+    print(f"[DEBUG] current_composition value: {current_composition}")
 
     def is_valid_candidate(candidate_comp, base_comp):
-        base_filtered = {k: v for k, v in base_comp.items() if v > 5}
-        cand_filtered = {k: v for k, v in candidate_comp.items() if v > 5}
+        print(f"[DEBUG] candidate_comp type: {type(candidate_comp)} / base_comp type: {type(base_comp)}")
+        print(f"[DEBUG] candidate_comp: {candidate_comp}")
+        print(f"[DEBUG] base_comp: {base_comp}")
+
+        try:
+            base_filtered = {k: v for k, v in base_comp.items() if v > 5}
+            cand_filtered = {k: v for k, v in candidate_comp.items() if v > 5}
+        except AttributeError as e:
+            print(f"[ERROR] .items() 呼び出し失敗: {e}")
+            return False
 
         base_keys = list(base_filtered.keys())
         shared_keys = set(base_filtered.keys()) & set(cand_filtered.keys())
