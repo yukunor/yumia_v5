@@ -48,7 +48,7 @@ async def chat(
     logger.debug("✅ /chat エンドポイントに到達")
     try:
         user_input = message
-        logger.debug(f"📥 ユーザー入力取得完了: {user_input}")
+        logger.debug(f"ユーザー入力取得完了: {user_input}")
 
         # 添付ファイル処理
         if file:
