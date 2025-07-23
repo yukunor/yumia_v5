@@ -13,7 +13,20 @@ from module.mongo.mongo_client import get_mongo_client
 # Renderの環境変数からOpenAIのAPIキーを取得
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# MongoDBへ直接ログを記録する関数
+
+# ログレベルのしきい値（必要に応じて "DEBUG" などに変更可能）
+LOG_LEVEL_THRESHOLD = "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
+
+
+# ログレベルの優先度
+LEVEL_ORDER = {
+    "DEBUG": 10,
+    "INFO": 20,
+    "WARNING": 30,
+    "ERROR": 40
+}
+
+# MongoDBへログを保存
 def log_to_mongo(level: str, message: str):
     try:
         client = get_mongo_client()
@@ -29,15 +42,24 @@ def log_to_mongo(level: str, message: str):
     except Exception as e:
         print(f"[ERROR] MongoDBログ記録失敗: {e}")
 
-# Pythonのloggerでinfo/debug/errorを呼び出し可能にするラッパー
+# ログラッパー（ログレベルしきい値で出力制御）
 class MongoLogger:
-    def info(self, message): log_to_mongo("INFO", message)
-    def debug(self, message): log_to_mongo("DEBUG", message)
-    def warning(self, message): log_to_mongo("WARNING", message)
-    def error(self, message): log_to_mongo("ERROR", message)
+    def log(self, level: str, message: str):
+        if LEVEL_ORDER[level] >= LEVEL_ORDER[LOG_LEVEL_THRESHOLD]:
+            log_to_mongo(level, message)
 
-# 任意のモジュールで使用可能
+    def debug(self, message: str): self.log("DEBUG", message)
+    def info(self, message: str): self.log("INFO", message)
+    def warning(self, message: str): self.log("WARNING", message)
+    def error(self, message: str): self.log("ERROR", message)
+
+# 任意の場所で import して使用
 logger = MongoLogger()
+
+
+
+
+
 
 
 #　履歴を取得しWeb UI上に100件を上限として表示
