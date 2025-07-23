@@ -28,7 +28,7 @@ def search_index_response(composition: dict, keywords: list[str]) -> dict: #検�
 def translate_emotion(emotion): #英語の感情名を日本語に変換
     return emotion_map.get(emotion, emotion)
 
-def normalize_composition_vector(partial_composition: dict) -> dict:　
+def normalize_composition_vector(partial_composition: dict) -> dict: 
     """
     受け取った構成比（部分的）を emotion_map 順に整形（不足は0で埋める）
     """
@@ -70,7 +70,7 @@ def filter_by_keywords(index_data, input_keywords): #カテゴライズした辞
     print(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
-def find_best_match_by_composition(current_composition, candidates):　#long、short、intermediateから類似感情を1つずつ抽出
+def find_best_match_by_composition(current_composition, candidates): #long、short、intermediateから類似感情を1つずつ抽出
     print(f"🔎 構成比マッチング対象数: {len(candidates)}")
 
     def is_valid_candidate(candidate_comp, base_comp):
