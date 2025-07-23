@@ -5,7 +5,7 @@ from module.mongo.mongo_client import get_mongo_client
 from module.responce.responxe_index import find_best_match_by_composition
 from module.utils.utils import logger
 
-ef get_all_short_category_data():
+def get_all_short_category_data():
     """
     MongoDBのemotion_dataから、categoryが"short"の全データを取得する。
     """
