@@ -19,10 +19,10 @@ emotion_map = {
 }
 
 def get_top_long_emotions():
-    """
-    MongoDBからlongカテゴリのemotionをカウントし、
-    出現頻度の高い感情トップ4（日本語）を返す。
-    """
+    
+    #MongoDBからlongカテゴリのemotionをカウントし、
+    #出現頻度の高い感情トップ4（日本語）を返す。
+    
     try:
         client = get_mongo_client()
         db = client["emotion_db"]
@@ -55,51 +55,8 @@ def get_top_long_emotions():
 
 
 
-
-
-
-# 指定件数の平均を計算する補助関数
-def _average_emotions(data_list):
-    total = defaultdict(float)
-    count = len(data_list)
-    if count == 0:
-        return {emotion: 0 for emotion in ALL_EMOTIONS}
-
-    for item in data_list:
-        ratio = item.get("構成比", {})
-        for emotion in ALL_EMOTIONS:
-            total[emotion] += ratio.get(emotion, 0)
-
-    return {emotion: round(total[emotion] / count, 2) for emotion in ALL_EMOTIONS}
-
-# 短期・中期・長期の平均を計算
-def get_emotion_averages():
-    try:
-        with open(HISTORY_PATH, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        data = [json.loads(line.strip()) for line in lines][-15:]
-
-        short = _average_emotions(data[-5:])
-        intermediate = _average_emotions(data[-10:])
-        long = _average_emotions(data)
-
-        return {
-            "短期": short,
-            "中期": intermediate,
-            "長期": long
-        }
-
-    except Exception as e:
-        logger.error(f"[ERROR] 感情履歴の平均処理に失敗しました: {e}")
-        return {
-            "短期": {e: 0 for e in ALL_EMOTIONS},
-            "中期": {e: 0 for e in ALL_EMOTIONS},
-            "長期": {e: 0 for e in ALL_EMOTIONS}
-        }
-
-# 現在の気分を合成
 def synthesize_current_emotion():
+    # 現在の気分を合成
     try:
         averages = get_emotion_averages()
         short = averages.get("短期", {})
