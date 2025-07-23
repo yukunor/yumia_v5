@@ -13,14 +13,31 @@ from module.mongo.mongo_client import get_mongo_client
 # Renderの環境変数からOpenAIのAPIキーを取得
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# ロガー
-logger = logging.getLogger("yumia_logger")
-if not logger.hasHandlers():
-    handler = logging.FileHandler("app.log", encoding="utf-8")
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+# MongoDBへ直接ログを記録する関数
+def log_to_mongo(level: str, message: str):
+    try:
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["app_log"]
+            log_entry = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": level,
+                "message": message
+            }
+            collection.insert_one(log_entry)
+    except Exception as e:
+        print(f"[ERROR] MongoDBログ記録失敗: {e}")
+
+# Pythonのloggerでinfo/debug/errorを呼び出し可能にするラッパー
+class MongoLogger:
+    def info(self, message): log_to_mongo("INFO", message)
+    def debug(self, message): log_to_mongo("DEBUG", message)
+    def warning(self, message): log_to_mongo("WARNING", message)
+    def error(self, message): log_to_mongo("ERROR", message)
+
+# 任意のモジュールで使用可能
+logger = MongoLogger()
 
 
 #　履歴を取得しWeb UI上に100件を上限として表示
