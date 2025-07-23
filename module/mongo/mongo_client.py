@@ -2,7 +2,6 @@ import os
 import certifi
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
-from module.utils.utils import logger  # 既存のlogger使用
 
 _mongo_client = None
 
@@ -16,7 +15,7 @@ def get_mongo_client():
             return _mongo_client
         except ConnectionFailure:
             print("[⚠️] 既存のMongoClientが失敗しました。再接続を試みます")
-            logger.warning("[WARNING] 既存のMongoClientが失敗 → 再接続")
+            print("[WARNING] 既存のMongoClientが失敗 → 再接続")
 
     try:
         mongo_uri = os.getenv("MONGODB_URI")
@@ -27,10 +26,10 @@ def get_mongo_client():
         _mongo_client = MongoClient(mongo_uri, tlsCAFile=certifi.where())
         _mongo_client.admin.command("ping")
         print("[✅] MongoDBへの新規接続に成功しました")
-        logger.info("[INFO] MongoDB Atlas接続成功")
+        print("[INFO] MongoDB Atlas接続成功")
         return _mongo_client
     except Exception as e:
         print(f"[❌] MongoDB接続に失敗しました: {e}")
-        logger.error(f"[ERROR] MongoDB接続失敗: {e}")
+        print(f"[ERROR] MongoDB接続失敗: {e}")
         return None
 
