@@ -1,16 +1,23 @@
-#module/llm/llm_client.py
+# module/llm/llm_client.py
 from openai import OpenAI
 import re
 import json
 import os
+import threading
 from datetime import datetime
 
-from module.utils.utils import load_history, load_system_prompt_cached, load_emotion_prompt, load_dialogue_prompt, logger
+from module.utils.utils import (
+    load_history,
+    load_system_prompt_cached,
+    load_emotion_prompt,
+    load_dialogue_prompt,
+    logger
+)
 from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI_MAX_TOKENS
 from module.mongo.emotion_dataset import get_recent_dialogue_history
 from module.emotion.basic_personality import get_top_long_emotions
 
-#from module.memory.oblivion_emotion import clean_old_emotions
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
@@ -100,6 +107,8 @@ def generate_emotion_from_prompt_with_context(
             return "応答生成でエラーが発生しました。", {}
 
     # 🔻 条件2：マッチあり → 感情データ参照して応答構築
+    from module.response.main_response import collect_all_category_responses
+
     emotion_name = best_match.get("emotion")
     date_str = best_match.get("date")
     history_data = collect_all_category_responses(emotion_name, date_str)
@@ -146,6 +155,14 @@ def generate_emotion_from_prompt_with_context(
                 emotion_data = json.loads(json_match.group(1))
                 emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
                 clean_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
+
+                # 🔸 非同期スレッドで感情統合処理を実行
+                if "構成比" in emotion_data:
+                    threading.Thread(
+                        target=run_emotion_update_pipeline,
+                        args=(emotion_data["構成比"],)
+                    ).start()
+
                 return clean_response, emotion_data
             except Exception as e:
                 logger.error(f"[ERROR] JSONパース失敗: {e}")
@@ -156,3 +173,22 @@ def generate_emotion_from_prompt_with_context(
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "応答生成でエラーが発生しました。", {}
+
+
+# 🔻 非同期スレッドで感情ベクトル合成・保存・サマリーを実行する関数
+def run_emotion_update_pipeline(new_vector: dict):
+    try:
+        from module.emotion.emotion_stats import (
+            load_current_emotion,
+            merge_emotion_vectors,
+            save_current_emotion,
+            summarize_feeling
+        )
+
+        current = load_current_emotion()
+        merged = merge_emotion_vectors(current, new_vector)
+        save_current_emotion(merged)
+        summarize_feeling(merged)
+
+    except Exception as e:
+        logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
