@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 from docx import Document
 
 from module.file_router import route_file_for_processing
-from module.utils.utils import mongo_logger as logger
+from module.utils.utils import logger
 
 TEMP_IMAGE_DIR = "temp_images"
 os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
