@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from collections import defaultdict, Counter
 
-from module.utils.utils import mongo_logger as logger
+from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
 
 # 英語 → 日本語の正規順マッピング（構成比整形の基準）
