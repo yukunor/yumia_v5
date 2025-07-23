@@ -6,9 +6,6 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTa
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-import inspect
-print(inspect.getfile(logger.__class__))
-
 
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
@@ -19,7 +16,9 @@ from module.emotion.main_emotion import save_response_to_memory
 from module.emotion.emotion_stats import summarize_feeling
 from module.llm.llm_client import run_emotion_update_pipeline
 
-
+import inspect
+print(f"📌 loggerの型（main.py）: {type(logger)}")
+print(f"📌 logger 定義ファイル: {inspect.getfile(logger.__class__)}")
 
 app = FastAPI()
 
