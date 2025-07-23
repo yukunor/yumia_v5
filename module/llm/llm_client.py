@@ -8,7 +8,7 @@ from datetime import datetime
 from module.utils.utils import load_history, load_system_prompt_cached, load_emotion_prompt, load_dialogue_prompt, logger
 from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI_MAX_TOKENS
 from module.mongo.emotion_dataset import get_recent_dialogue_history
-from module.emotion.emotion_stats import get_top_long_emotions
+from module.emotion.basic_personality import get_top_long_emotions
 
 #from module.memory.oblivion_emotion import clean_old_emotions
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
