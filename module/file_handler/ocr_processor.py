@@ -4,6 +4,7 @@ import pytesseract
 from PIL import Image
 
 from module.file_router import route_file_for_processing
+from module.utils.utils import mongo_logger as logger
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}
 TEXT_EXTENSIONS = {".txt", ".md", ".csv", ".json", ".yaml", ".yml"}
