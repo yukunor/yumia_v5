@@ -8,13 +8,10 @@ import openai
 from pymongo import DESCENDING
 
 print("📌 [STEP] utils.py 読み込み開始")
-
-# OpenAI APIキーの読み込み
 openai.api_key = os.getenv("OPENAI_API_KEY")
 print(f"📌 [ENV] OPENAI_API_KEY 読み込み結果: {'あり' if openai.api_key else 'なし'}")
 
-# ログレベル設定
-LOG_LEVEL_THRESHOLD = "DEBUG"  # "DEBUG", "INFO", "WARNING", "ERROR"
+LOG_LEVEL_THRESHOLD = "DEBUG"
 LEVEL_ORDER = {
     "DEBUG": 10,
     "INFO": 20,
@@ -22,7 +19,25 @@ LEVEL_ORDER = {
     "ERROR": 40
 }
 
-# MongoLoggerの定義とインスタンス生成（← 最優先で定義）
+# ✅ log_to_mongo を最初に定義（これがないと MongoLogger の評価に使えない）
+def log_to_mongo(level: str, message: str):
+    print(f"[CALL] log_to_mongo: {level} - {message}")
+    try:
+        from module.mongo.mongo_client import get_mongo_client  # ← 遅延importで安全
+        client = get_mongo_client()
+        if client:
+            db = client["emotion_db"]
+            collection = db["app_log"]
+            log_entry = {
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "level": level,
+                "message": message
+            }
+            collection.insert_one(log_entry)
+    except Exception as e:
+        print(f"[ERROR] MongoDBログ記録失敗: {e}")
+
+# ✅ 先に MongoLogger を定義（log_to_mongo 使用可能に）
 class MongoLogger:
     def log(self, level: str, message: str):
         print(f"[LOG WRAPPER] 呼び出しレベル: {level} / 閾値: {LOG_LEVEL_THRESHOLD}")
