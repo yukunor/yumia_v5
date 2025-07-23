@@ -8,6 +8,7 @@ from datetime import datetime
 from module.utils.utils import load_history, load_system_prompt_cached, load_emotion_prompt, load_dialogue_prompt, logger
 from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI_MAX_TOKENS
 from module.mongo.emotion_dataset import get_recent_dialogue_history
+from module.emotion.emotion_stats import get_top_long_emotions
 
 #from module.memory.oblivion_emotion import clean_old_emotions
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -49,16 +50,23 @@ def generate_gpt_response_from_history() -> str:
         return "申し訳ありません、ご主人。応答生成中にエラーが発生しました。"
 
 
-def generate_emotion_from_prompt_with_context(user_input: str,emotion_structure: dict,best_match: dict | None) -> tuple[str, dict]:
-    from module.response.main_response import collect_all_category_responses
+def generate_emotion_from_prompt_with_context(
+    user_input: str,
+    emotion_structure: dict,
+    best_match: dict | None
+) -> tuple[str, dict]:
+    """
+    感情構造と参照感情データを用いて、GPTに応答生成を行わせる。
+    best_match が None の場合は履歴ベースで応答を生成する。
+    """
     system_prompt = load_system_prompt_cached()
     user_prompt = load_dialogue_prompt()
 
-    # 🔸 人格傾向の取得と整形
-    personality = extract_personality_tendency()
+    # 🔸 人格傾向の取得と整形（longカテゴリの頻出emotion）
+    top4_personality = get_top_long_emotions()
     personality_text = "\n【人格傾向】\nこのAIは以下の感情を持つ傾向があります：\n"
-    if personality:
-        for emotion, count in personality.items():
+    if top4_personality:
+        for emotion, count in top4_personality:
             personality_text += f"・{emotion}（{count}回）\n"
     else:
         personality_text += "傾向情報がまだ十分にありません。\n"
