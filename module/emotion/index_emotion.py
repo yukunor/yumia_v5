@@ -1,114 +1,62 @@
+# module/index/index_emotion.py
+
 import json
 import os
 from datetime import datetime
 from collections import defaultdict, Counter
-from utils import logger, get_mongo_client  # ロガーとMongo関数のインポート
 
-# === EMOTION_MAPから日本語キーを抽出 ===
-EMOTION_MAP = {
-    "喜び": "Joy", "期待": "Anticipation", "怒り": "Anger", "嫌悪": "Disgust",
-    "悲しみ": "Sadness", "驚き": "Surprise", "恐れ": "Fear", "信頼": "Trust",
-    "楽観": "Optimism", "誇り": "Pride", "病的状態": "Morbidness", "積極性": "Aggressiveness",
-    "冷笑": "Cynicism", "悲観": "Pessimism", "軽蔑": "Contempt", "羨望": "Envy",
-    "憤慨": "Outrage", "自責": "Remorse", "不信": "Unbelief", "恥": "Shame",
-    "失望": "Disappointment", "絶望": "Despair", "感傷": "Sentimentality", "畏敬": "Awe",
-    "好奇心": "Curiosity", "歓喜": "Delight", "服従": "Submission", "罪悪感": "Guilt",
-    "不安": "Anxiety", "愛": "Love", "希望": "Hope", "優位": "Dominance"
+from module.utils.utils import logger
+from module.mongo.mongo_client import get_mongo_client
+
+# 英語 → 日本語の正規順マッピング（構成比整形の基準）
+EMOTION_TRANSLATION_REVERSE = {
+    "Joy": "喜び", "Anticipation": "期待", "Anger": "怒り", "Disgust": "嫌悪",
+    "Sadness": "悲しみ", "Surprise": "驚き", "Fear": "恐れ", "Trust": "信頼",
+    "Optimism": "楽観", "Pride": "誇り", "Morbidness": "病的状態", "Aggressiveness": "積極性",
+    "Cynicism": "冷笑", "Pessimism": "悲観", "Contempt": "軽蔑", "Envy": "羨望",
+    "Outrage": "憤慨", "Remorse": "自責", "Unbelief": "不信", "Shame": "恥",
+    "Disappointment": "失望", "Despair": "絶望", "Sentimentality": "感傷", "Awe": "畏敬",
+    "Curiosity": "好奇心", "Delight": "歓喜", "Submission": "服従", "Guilt": "罪悪感",
+    "Anxiety": "不安", "Love": "愛", "Hope": "希望", "Dominance": "優位"
 }
 
-# 全感情語を固定順で抽出（日本語）
-EMOTION_KEYS = list(EMOTION_MAP.keys())
-
-# === 感情カテゴリ分類 ===
-def get_memory_category(weight):
-    if weight >= 95:
-        return "long"
-    elif weight >= 80:
-        return "intermediate"
-    else:
-        return "short"
-
-# === 構成比を固定順・0補完で正規化 ===
-def normalize_emotion_vector(構成比: dict) -> dict:
-    return {emotion: 構成比.get(emotion, 0) for emotion in EMOTION_KEYS}
-
-# === MongoDBへのインデックス保存 ===
-def update_emotion_index(emotion_data, memory_path):
-    #print("📥 MongoDBへのインデックス保存を開始します...")
+def save_index_data(data: dict, emotion_en: str, category: str):
+    """
+    感情構造データを MongoDB Atlas の emotion_db.emotion_index に保存する。
+    主感情・emotion はどちらも英語。
+    構成比は EMOTION_TRANSLATION_REVERSE の順に従って並べる。
+    """
     try:
         client = get_mongo_client()
         if client is None:
-            raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+            logger.error("❌ MongoDBクライアント取得に失敗")
+            return
 
         db = client["emotion_db"]
         collection = db["emotion_index"]
 
-        index_entry = {
-            "date": emotion_data.get("date", datetime.now().strftime("%Y%m%d%H%M%S")),
-            "主感情": emotion_data.get("主感情", "Unknown"),
-            "構成比": normalize_emotion_vector(emotion_data.get("構成比", {})),
-            "キーワード": emotion_data.get("keywords", []),
-            "emotion": EMOTION_MAP.get(emotion_data.get("主感情"), "Unknown"),
-            "category": get_memory_category(emotion_data.get("重み", 0)),
-            "保存先": memory_path
+        # 🔧 構成比32感情ベクトル（正規順）
+        full_composition = {}
+        original_comp = data.get("構成比", {})
+        for en_emotion, ja_emotion in EMOTION_TRANSLATION_REVERSE.items():
+            full_composition[ja_emotion] = original_comp.get(ja_emotion, 0)
+
+        # 🔒 date完全同期
+        if "date" not in data:
+            logger.error("❌ 'date' が data に存在しないため index に保存不可")
+            return
+
+        index_document = {
+            "date": data["date"],
+            "主感情": emotion_en,  # ✅ 修正：英語
+            "構成比": full_composition,
+            "キーワード": data.get("keywords", []),
+            "emotion": emotion_en,  # ✅ 英語
+            "category": category
         }
 
-        #print(f"[DEBUG] インデックスに追加する内容: {index_entry}")
-        collection.insert_one(index_entry)
-        print(f"[✅] MongoDBにemotion_indexを登録しました: {index_entry['date']}")
-        logger.info(f"[MongoDB] emotion_index に登録: {index_entry['date']}")
-    except Exception as e:
-        print(f"[❌] MongoDB登録エラー: {e}")
-        logger.error(f"[ERROR] MongoDB登録失敗: {e}")
-
-def extract_personality_tendency() -> dict:
-    """
-    MongoDBのemotion_dataコレクションから、
-    categoryがlongの履歴およびemotionを取得し、
-    主感情を集計して人格傾向を抽出する（簡潔ログ版）。
-    """
-    emotion_counter = Counter()
-    try:
-        client = get_mongo_client()
-        if not client:
-            raise ConnectionError("MongoDB接続失敗")
-        db = client["emotion_db"]
-        collection = db["emotion_data"]
-
-        print("📡 MongoDBクライアント接続完了 → longカテゴリを走査")
-
-        docs = collection.find({"category": "long"})
-        count = 0
-
-        for doc in docs:
-            top_emotion = doc.get("emotion")
-            if top_emotion:
-                emotion_counter[top_emotion] += 1
-                count += 1
-
-            data = doc.get("data")
-            if not isinstance(data, dict):
-                continue
-
-            history_list = data.get("履歴", [])
-            if not isinstance(history_list, list):
-                continue
-
-            for entry in history_list:
-                if not isinstance(entry, dict):
-                    continue
-                main_emotion = entry.get("主感情")
-                if main_emotion:
-                    emotion_counter[main_emotion] += 1
-                    count += 1
-
-        #print(f"[DEBUG] 主感情カウント合計: {count} 件")
-        #print("🧭 現在人格傾向（上位4件）:")
-        #for emotion, cnt in emotion_counter.most_common(4):
-            #print(f"  - {emotion}: {cnt}件")
-
-        return dict(emotion_counter.most_common(4))
+        result = collection.insert_one(index_document)
+        logger.info(f"✅ インデックス保存成功: _id={result.inserted_id} / date={data['date']}")
 
     except Exception as e:
-        print(f"[ERROR] 人格傾向データ抽出全体で失敗: {e}")
-        return {}
+        logger.error(f"❌ インデックス保存中にエラー: {e}")
