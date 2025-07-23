@@ -6,7 +6,6 @@ from datetime import datetime
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client  # ロガーとMongo関数のインポート
 
-# 日本語感情名 → 英語ファイル名の対応辞書
 EMOTION_MAP = {
     "喜び": "Joy", "期待": "Anticipation", "怒り": "Anger", "嫌悪": "Disgust", "悲しみ": "Sadness",
     "驚き": "Surprise", "恐れ": "Fear", "信頼": "Trust", "楽観": "Optimism", "誇り": "Pride",
@@ -17,13 +16,9 @@ EMOTION_MAP = {
     "愛": "Love", "希望": "Hope", "優位": "Dominance"
 }
 
-#GPTで感情構造を生成し、EMOTION_MAPに基づいた32感情の構成比ベクトルを返す。
-def get_composition_vector(user_input: str, emotion_structure: dict, best_match: dict | None) -> dict:
-    _, emotion_data = generate_emotion_from_prompt_with_context(user_input, emotion_structure, best_match)
-    raw_composition = emotion_data.get("構成比", {})
-    full_vector = {emotion: raw_composition.get(emotion, 0) for emotion in EMOTION_MAP.keys()}
-    return full_vector
-
+# 🔸 構成比を32感情に正規化
+def normalize_composition_vector(raw_composition: dict) -> dict:
+    return {emotion: raw_composition.get(emotion, 0) for emotion in EMOTION_MAP.keys()}
 
 # 現在感情：読み込み
 def load_current_emotion():
