@@ -3,12 +3,19 @@ import json
 from datetime import datetime
 
 from module.utils.utils import logger
+from module.mongo.mongo_client import get_mongo_client
 
-
-from .divide_emotion import divide_and_store  # ✅ divide_and_store は index 保存しない設計に統一
-from .index_emotion import update_emotion_index
-from utils import logger, get_mongo_client
-
+# 主感情の日本語 → 英語マッピング
+EMOTION_TRANSLATION = {
+    "喜び": "Joy", "期待": "Anticipation", "怒り": "Anger", "嫌悪": "Disgust",
+    "悲しみ": "Sadness", "驚き": "Surprise", "恐れ": "Fear", "信頼": "Trust",
+    "楽観": "Optimism", "誇り": "Pride", "病的状態": "Morbidness", "積極性": "Aggressiveness",
+    "冷笑": "Cynicism", "悲観": "Pessimism", "軽蔑": "Contempt", "羨望": "Envy",
+    "憤慨": "Outrage", "自責": "Remorse", "不信": "Unbelief", "恥": "Shame",
+    "失望": "Disappointment", "絶望": "Despair", "感傷": "Sentimentality", "畏敬": "Awe",
+    "好奇心": "Curiosity", "歓喜": "Delight", "服従": "Submission", "罪悪感": "Guilt",
+    "不安": "Anxiety", "愛": "Love", "希望": "Hope", "優位": "Dominance"
+}
 
 def save_response_to_memory(response_text: str) -> dict | None:
     """
@@ -38,71 +45,46 @@ def save_response_to_memory(response_text: str) -> dict | None:
         logger.error(f"❌ 構造データ抽出中に例外発生: {e}")
         return None
 
-
-
-
-
-
-ALL_EMOTIONS = [
-    "喜び", "期待", "怒り", "嫌悪", "悲しみ", "驚き", "恐れ", "信頼", "楽観", "誇り",
-    "病的状態", "積極性", "冷笑", "悲観", "軽蔑", "羨望", "憤慨", "自責", "不信", "恥",
-    "失望", "絶望", "感傷", "畏敬", "好奇心", "歓喜", "服従", "罪悪感", "不安", "愛", "希望", "優位"
-]
-
-# MongoDB 接続
-try:
-    client = get_mongo_client()
-    if client is None:
-        raise ConnectionError("[ERROR] MongoDBクライアントの取得に失敗しました")
-    db = client["emotion_db"]
-    collection_history = db["emotion_history"]
-    collection_samples = db["emotion_samples"]
-except Exception as e:
-    logger.error(f"[ERROR] MongoDB接続失敗: {e}")
-    raise
-
-def pad_emotion_vector(vector):
-    return {emotion: vector.get(emotion, 0) for emotion in ALL_EMOTIONS}
-
-def handle_emotion(emotion_data, user_input=None, response_text=None):
+def write_structured_emotion_data(data: dict):
+    """
+    抽出済みの感情構造データ（JSON）を MongoDB Atlas の emotion_db.emotion_data に保存する。
+    """
     try:
-        # 欠損項目を補完する（②③に対応）
-        emotion_data.setdefault("keywords", [])
-        emotion_data.setdefault("状況", "")
-        emotion_data.setdefault("心理反応", "")
-        emotion_data.setdefault("関係性変化", "")
-        emotion_data.setdefault("関連", [])
+        client = get_mongo_client()
+        if client is None:
+            logger.error("❌ MongoDBクライアント取得に失敗")
+            return
 
-        memory_path = divide_and_store(emotion_data)  # ✅ データ保存のみ行う
-        update_emotion_index(emotion_data, memory_path)  # ✅ index 保存はここでのみ実行
-        logger.info("[INFO] 感情データ処理が完了しました。")
-    except Exception as e:
-        logger.error(f"[ERROR] 感情データ処理中にエラー発生: {e}")
-        raise
+        db = client["emotion_db"]
+        collection = db["emotion_data"]
 
-def save_emotion_sample(input_text, response_text, emotion_vector):
-    try:
-        padded_vector = pad_emotion_vector(emotion_vector)
-        record = {
-            "input": input_text,
-            "response": response_text,
-            "emotion_vector": padded_vector,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # 主感情を英語に変換
+        main_emotion_ja = data.get("主感情", "")
+        main_emotion_en = EMOTION_TRANSLATION.get(main_emotion_ja)
+        if not main_emotion_en:
+            logger.warning(f"⚠ 主感情が未定義または翻訳不可: {main_emotion_ja}")
+            return
+
+        # 重みに応じてカテゴリを決定
+        weight = int(data.get("重み", 0))
+        if weight >= 95:
+            category = "long"
+        elif weight >= 80:
+            category = "intermediate"
+        else:
+            category = "short"
+
+        # 保存形式整形
+        document = {
+            "emotion": main_emotion_en,
+            "category": category,
+            "data": data.copy(),
+            "履歴": [data.copy()]
         }
-        collection_samples.insert_one(record)
-        logger.info("[INFO] MongoDBに感情サンプルを記録しました。")
-    except Exception as e:
-        logger.error(f"[ERROR] 感情サンプルの記録に失敗しました: {e}")
 
-def append_emotion_history(emotion_data):
-    try:
-        padded_vector = pad_emotion_vector(emotion_data.get("構成比", {}))
-        record = {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "主感情": emotion_data.get("主感情", ""),
-            "構成比": padded_vector
-        }
-        collection_history.insert_one(record)
-        logger.info("[INFO] MongoDBに感情履歴を記録しました。")
+        # MongoDBへ保存（新規挿入）
+        result = collection.insert_one(document)
+        logger.info(f"✅ MongoDB保存成功: _id={result.inserted_id}, 感情={main_emotion_en}, カテゴリ={category}")
+
     except Exception as e:
-        logger.error(f"[ERROR] 感情履歴の保存に失敗しました: {e}")
+        logger.error(f"❌ 感情構造データ保存失敗: {e}")
