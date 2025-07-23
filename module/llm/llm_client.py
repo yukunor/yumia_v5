@@ -1,4 +1,4 @@
-# module/llm/llm_client.py
+#module/llm/llm_client.py
 from openai import OpenAI
 import re
 import json
@@ -11,7 +11,6 @@ from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI
 from module.mongo.emotion_dataset import get_recent_dialogue_history
 from module.emotion.basic_personality import get_top_long_emotions
 from module.emotion.emotion_stats import load_current_emotion
-
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -179,6 +178,10 @@ def generate_emotion_from_prompt_with_context(
 
                 # 🔸 非同期スレッドで感情統合処理を実行
                 if "構成比" in emotion_data:
+                    print("🧪 [DEBUG] 構成比デバッグ出力開始")
+                    print("🧪 [DEBUG] 構成比 type:", type(emotion_data["構成比"]))
+                    print("🧪 [DEBUG] 構成比 内容:", emotion_data["構成比"])
+
                     threading.Thread(
                         target=run_emotion_update_pipeline,
                         args=(emotion_data["構成比"],)
