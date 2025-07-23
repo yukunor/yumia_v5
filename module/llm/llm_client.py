@@ -16,6 +16,7 @@ from module.utils.utils import (
 from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI_MAX_TOKENS
 from module.mongo.emotion_dataset import get_recent_dialogue_history
 from module.emotion.basic_personality import get_top_long_emotions
+from module.emotion.emotion_stats import load_current_emotion
 
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -23,7 +24,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def generate_gpt_response_from_history() -> str:
     """
-    MongoDBから直近3件の対話履歴を取得し、それをもとにGPT応答を生成。
+    MongoDBから直近3件の対話履歴と現在感情を取得し、それをもとにGPT応答を生成。
     応答内容は文字列で返却（JSON抽出は別モジュールで処理）。
     """
     logger.info("[START] generate_gpt_response_from_history")
@@ -36,6 +37,26 @@ def generate_gpt_response_from_history() -> str:
     selected_history = load_history(3)
     logger.info(f"[INFO] 履歴件数: {len(selected_history)} 件")
 
+    # 現在感情の取得
+    from module.emotion.emotion_stats import load_current_emotion
+    current_emotion = load_current_emotion()
+    logger.info(f"[INFO] 現在感情ベクトル: {current_emotion}")
+
+    # 感情ベクトルをAIの内的感情として明示
+    if current_emotion:
+        emotion_text = (
+            "\n【現在の感情状態（AI自身の内的状態）】\n"
+            "あなた（AI）は以下の感情を現在抱いています。\n"
+            "この感情に従って、言葉遣いや態度、語尾などを自然に調整してください。\n"
+            + ", ".join([f"{k}: {v}%" for k, v in current_emotion.items()])
+        )
+    else:
+        emotion_text = (
+            "\n【現在の感情状態（AI自身の内的状態）】\n"
+            "現在の感情はまだ十分に蓄積されていません。通常の口調で応答してください。"
+        )
+
+    # GPTへのメッセージ構築
     try:
         logger.info("[INFO] OpenAI呼び出し開始")
         response = client.chat.completions.create(
@@ -43,7 +64,7 @@ def generate_gpt_response_from_history() -> str:
             messages=[
                 {"role": "system", "content": system_prompt},
                 *[{"role": entry["role"], "content": entry["message"]} for entry in selected_history],
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": f"{emotion_text}\n\n{user_prompt}"}
             ],
             max_tokens=OPENAI_MAX_TOKENS,
             temperature=OPENAI_TEMPERATURE,
@@ -54,7 +75,8 @@ def generate_gpt_response_from_history() -> str:
 
     except Exception as e:
         logger.error(f"[ERROR] OpenAI呼び出し失敗: {e}")
-        return "申し訳ありません、ご主人。応答生成中にエラーが発生しました。"
+        return "応答生成中にエラーが発生しました。"
+
 
 
 def generate_emotion_from_prompt_with_context(
