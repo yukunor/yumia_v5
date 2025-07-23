@@ -3,7 +3,7 @@
 from pymongo import MongoClient
 from datetime import datetime
 import os
-from module.utils.utils import mongo_logger as logger
+from module.utils.utils import logger
 
 # MongoDB接続設定（RenderのEnvironment Variablesから取得）
 MONGO_URI = os.getenv("MONGODB_URI")
