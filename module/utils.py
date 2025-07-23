@@ -82,6 +82,7 @@ def append_history(role, message):
     except Exception as e:
         logger.error(f"[ERROR] 履歴保存に失敗: {e}")
 
+
 # 現在感情：読み込み
 def load_current_emotion():
     try:
@@ -111,11 +112,7 @@ def save_current_emotion(emotion_vector):
     except Exception as e:
         logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")
 
-
-
-
-
-# 感情ベクトルの合成（加重平均 + 減衰 + 正規化）
+# 現在感情ベクトルの合成（加重平均 + 減衰 + 正規化）
 def merge_emotion_vectors(
     current: dict,
     new: dict,
@@ -140,6 +137,10 @@ def merge_emotion_vectors(
             combined = {k: round((v / total) * 100, 2) for k, v in combined.items()}
 
     return combined
+
+
+
+
 
 
 
