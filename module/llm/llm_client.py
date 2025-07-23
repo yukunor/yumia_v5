@@ -1,4 +1,4 @@
-#module/llm/llm_client.py
+# module/llm/llm_client.py
 from openai import OpenAI
 import re
 import json
@@ -15,6 +15,7 @@ from module.emotion.emotion_stats import load_current_emotion
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
+# 🔸 履歴ベース応答生成（感情未参照）
 def generate_gpt_response_from_history() -> str:
     """
     MongoDBから直近3件の対話履歴と現在感情を取得し、それをもとにGPT応答を生成。
@@ -71,6 +72,7 @@ def generate_gpt_response_from_history() -> str:
         return "応答生成中にエラーが発生しました。"
 
 
+# 🔸 応答生成 + 感情構造付き（マッチあり／なし）
 def generate_emotion_from_prompt_with_context(
     user_input: str,
     emotion_structure: dict,
