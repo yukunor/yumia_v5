@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime, timedelta
-from module.utils.utils import mongo_logger as logger  # ロガーの読み込み
+from module.utils.utils import logger # ロガーの読み込み
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 INDEX_PATH = os.path.join(BASE_DIR, "index", "emotion_index.jsonl")
