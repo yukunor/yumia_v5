@@ -3,7 +3,7 @@ import shutil
 from uuid import uuid4
 from fastapi import UploadFile
 
-from module.utils.utils import mongo_logger as logger
+from module.utils.utils import logger
 
 # 最大一時保存ファイル数
 MAX_TEMP_FILES = 3
