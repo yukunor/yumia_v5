@@ -197,7 +197,7 @@ def generate_emotion_from_prompt_with_context(
 
 
 # 🔻 非同期スレッドで感情ベクトル合成・保存・サマリーを実行する関数
-async def run_emotion_update_pipeline(new_vector: dict):
+def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
     try:
         from module.emotion.emotion_stats import (
             load_current_emotion,
@@ -209,7 +209,9 @@ async def run_emotion_update_pipeline(new_vector: dict):
         current = load_current_emotion()
         merged = merge_emotion_vectors(current, new_vector)
         save_current_emotion(merged)
-        summarize_feeling(merged)
+        summary = summarize_feeling(merged)
+        return "感情を更新しました。", summary
 
     except Exception as e:
         logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
+        return "感情更新に失敗しました。", {}
