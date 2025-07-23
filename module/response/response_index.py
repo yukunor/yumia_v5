@@ -4,7 +4,7 @@ import os
 import re
 from bson import ObjectId
 
-from module.utils.utils import logger
+from module.utils.utils import mongo_logger as logger
 from module.mongo.mongo_client import get_mongo_client
 from module.llm.llm_client import generate_gpt_response_from_history
 
