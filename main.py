@@ -12,6 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 from module.llm.llm_client import generate_emotion_from_prompt_with_context
 from module.utils.utils import load_history, logger, append_history
 from module.emotion.main_memory import save_response_to_memory
+from module.emotion.emotion_stats import summarize_feeling
 
 
 
@@ -41,30 +42,39 @@ def get_history():
 async def chat(
     message: str = Form(...),
     file: UploadFile = File(None),
-    background_tasks: BackgroundTasks = None  # ← 追加
+    background_tasks: BackgroundTasks = None
 ):
     logger.debug("✅ /chat エンドポイントに到達")
     try:
         user_input = message
         logger.debug(f"📥 ユーザー入力取得完了: {user_input}")
 
+        # 添付ファイル処理
         if file:
             logger.debug(f"📎 添付ファイル名: {file.filename}")
             extracted_text = await handle_uploaded_file(file)
             if extracted_text:
                 user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
 
+        # 履歴に追加
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        # 応答生成
-        response = await run_response_pipeline(user_input)
+        # 応答生成（構成比も返却）
+        response_text, composition_vector = await run_response_pipeline(user_input)
         logger.debug("🧾 応答生成完了")
 
-        # 応答後にバックグラウンドで保存
-        background_tasks.add_task(save_response_to_memory, response)
+        # 🔹 6感情サマリー表示
+        if composition_vector:
+            summary = summarize_feeling(composition_vector)
+            logger.info("🧠 感情サマリー:")
+            for k, v in summary.items():
+                logger.info(f"  {k}: {v}")
 
-        return PlainTextResponse(response)
+        # 応答データを非同期で保存
+        background_tasks.add_task(save_response_to_memory, response_text)
+
+        return PlainTextResponse(response_text)
 
     except Exception as e:
         logger.error(f"❌ エラー発生: {e}")
