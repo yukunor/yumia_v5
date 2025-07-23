@@ -4,7 +4,7 @@ import os
 from bson import ObjectId
 
 from module.mongo.mongo_client import get_mongo_client
-from module.llm.llm_crient import generate_gpt_response_from_history
+from module.llm.llm_client import generate_gpt_response_from_history
 from module.response.response_short import find_short_history_by_emotion_and_date 
 from module.response.response_intermediate import find_intermediate_history_by_emotion_and_date
 from module.response.response_long import find_long_history_by_emotion_and_date
