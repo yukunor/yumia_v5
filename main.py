@@ -46,6 +46,7 @@ async def chat(
     background_tasks: BackgroundTasks = None
 ):
     logger.debug("✅ /chat エンドポイントに到達")
+    print("✅ debug() 実行済み", flush=True)
     try:
         user_input = message
         logger.debug(f"ユーザー入力取得完了: {user_input}")
