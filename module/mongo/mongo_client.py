@@ -3,7 +3,7 @@ import os
 import certifi
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
-from utils import logger  # 既存のlogger使用
+from module.utils.utils import logger  # 既存のlogger使用
 
 _mongo_client = None
 
