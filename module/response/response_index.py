@@ -25,7 +25,7 @@ def search_index_response(composition: dict, keywords: list[str]) -> dict: #検�
     composition = emotion_structure.get("構成比", {})
     keywords = emotion_structure.get("keywords", [])
 
-def translate_emotion(emotion):　　#英語の感情名を日本語に変換
+def translate_emotion(emotion): #英語の感情名を日本語に変換
     return emotion_map.get(emotion, emotion)
 
 def normalize_composition_vector(partial_composition: dict) -> dict:　
@@ -64,7 +64,7 @@ def load_and_categorize_index():　#取得したemotion_db.emotion_indexをcateg
 
     return categorized
 
-def filter_by_keywords(index_data, input_keywords):　#カテゴライズした辞書形式のemotion_indexからキーワード検索を実施
+def filter_by_keywords(index_data, input_keywords): #カテゴライズした辞書形式のemotion_indexからキーワード検索を実施
     print(f"🔍 キーワードフィルタ適用: {input_keywords}")
     filtered = [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
     print(f"🎯 一致件数: {len(filtered)}")
