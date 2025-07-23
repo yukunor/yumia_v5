@@ -121,3 +121,8 @@ def append_history(role, message):
             logger.info(f"[INFO] 履歴をMongoDBに保存: {entry}")
     except Exception as e:
         logger.error(f"[ERROR] 履歴保存に失敗: {e}")
+
+
+if __name__ == "__main__":
+    logger.debug("🌟 デバッグ動作確認")
+    logger.info("🔔 通常の情報ログ")
