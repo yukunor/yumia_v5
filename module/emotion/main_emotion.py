@@ -1,9 +1,47 @@
 import os
 import json
 from datetime import datetime
+
+from module.utils.utils import logger
+
+
 from .divide_emotion import divide_and_store  # ✅ divide_and_store は index 保存しない設計に統一
 from .index_emotion import update_emotion_index
 from utils import logger, get_mongo_client
+
+
+def save_response_to_memory(response_text: str) -> dict | None:
+    """
+    応答テキストの中から感情構造JSONを抽出し、辞書形式で返す。
+    保存はこの関数では行わない。
+    """
+    try:
+        logger.debug("💾 save_response_to_memory 開始")
+
+        # 🔍 JSON部分の抽出（{}の最初のブロックを想定）
+        match = re.search(r"\{[\s\S]*?\}", response_text)
+        if not match:
+            logger.warning("⚠ 応答にJSONデータが含まれていません")
+            return None
+
+        json_part = match.group()
+        try:
+            parsed_data = json.loads(json_part)
+        except json.JSONDecodeError as e:
+            logger.warning(f"⚠ JSONパース失敗: {e}")
+            return None
+
+        logger.debug(f"📦 構造化データ抽出成功: {parsed_data}")
+        return parsed_data
+
+    except Exception as e:
+        logger.error(f"❌ 構造データ抽出中に例外発生: {e}")
+        return None
+
+
+
+
+
 
 ALL_EMOTIONS = [
     "喜び", "期待", "怒り", "嫌悪", "悲しみ", "驚き", "恐れ", "信頼", "楽観", "誇り",
