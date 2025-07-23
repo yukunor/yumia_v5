@@ -182,9 +182,18 @@ def generate_emotion_from_prompt_with_context(
                     print("🧪 [DEBUG] 構成比 type:", type(emotion_data["構成比"]))
                     print("🧪 [DEBUG] 構成比 内容:", emotion_data["構成比"])
 
+                    composition = emotion_data["構成比"]
+                    if isinstance(composition, str):
+                        try:
+                            composition = json.loads(composition)
+                            emotion_data["構成比"] = composition
+                        except Exception as e:
+                            logger.error(f"[ERROR] 構成比の文字列→辞書変換に失敗: {e}")
+                            return clean_response, emotion_data
+
                     threading.Thread(
                         target=run_emotion_update_pipeline,
-                        args=(emotion_data["構成比"],)
+                        args=(composition,)
                     ).start()
 
                 return clean_response, emotion_data
@@ -197,7 +206,6 @@ def generate_emotion_from_prompt_with_context(
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "応答生成でエラーが発生しました。", {}
-
 
 # 🔻 非同期スレッドで感情ベクトル合成・保存・サマリーを実行する関数
 def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
