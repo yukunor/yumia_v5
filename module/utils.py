@@ -11,8 +11,7 @@ from module.mongo.mongo_client import get_mongo_client
 
 # Renderの環境変数からOpenAIのAPIキーを取得
 openai.api_key = os.getenv("OPENAI_API_KEY")
-#環境変数読み込み用
-load_dotenv() 
+
 
 # ログレベルのしきい値（必要に応じて "DEBUG" などに変更可能）
 LOG_LEVEL_THRESHOLD = "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
