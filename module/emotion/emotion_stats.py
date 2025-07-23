@@ -5,7 +5,6 @@ from datetime import datetime
 
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client  # ロガーとMongo関数のインポート
-from module.llm.llm_client import generate_emotion_from_prompt_with_context
 
 # 日本語感情名 → 英語ファイル名の対応辞書
 EMOTION_MAP = {
