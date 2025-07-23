@@ -176,6 +176,9 @@ def generate_emotion_from_prompt_with_context(
             try:
                 emotion_data = json.loads(json_match.group(1))
                 emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
+
+                if "構成比" in emotion_data and isinstance(emotion_data["構成比"], str):
+                    emotion_data["構成比"] = json.loads(emotion_data["構成比"])
                 clean_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
 
                 # 🔸 非同期スレッドで感情統合処理を実行
