@@ -33,8 +33,6 @@ def load_current_emotion():
         logger.error(f"[ERROR] 現在感情の読み込みに失敗: {e}")
         return {}
 
-
-
 # 感情ベクトル合成処理（あなたの既存関数）
 def merge_emotion_vectors(
     current: dict,
