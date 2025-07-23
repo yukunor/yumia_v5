@@ -3,7 +3,7 @@ import json
 from collections import Counter
 
 from module.mongo.mongo_client import get_mongo_client
-from module.utils.utils import logger
+from module.utils.utils import mongo_logger as logger
 
 
 # 英語→日本語の感情マッピング辞書
