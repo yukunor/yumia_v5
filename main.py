@@ -55,14 +55,6 @@ async def chat(
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        logger.debug("🔍 応答生成と感情推定 開始")
-        response, emotion_data = run_response_pipeline(user_input)
-        logger.debug("✅ 応答と感情データ取得 完了")
-
-        logger.info(f"🧾 取得した感情データの内容: {emotion_data}")
-        summary = extract_emotion_summary(emotion_data, emotion_data.get("主感情", "未定義"))
-        logger.info(f"📊 構成比サマリ: {summary}")
-
         # ✅ 応答文をそのまま返す（JSON含んだ自然文）
         return PlainTextResponse(response)
 
