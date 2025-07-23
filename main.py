@@ -11,6 +11,7 @@ from pydantic import BaseModel
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 from module.llm.llm_client import generate_emotion_from_prompt_with_context
 from module.utils.utils import load_history, logger, append_history
+from module.emotion.main_memory import save_response_to_memory
 
 
 
@@ -39,7 +40,8 @@ def get_history():
 @app.post("/chat")
 async def chat(
     message: str = Form(...),
-    file: UploadFile = File(None)
+    file: UploadFile = File(None),
+    background_tasks: BackgroundTasks = None  # ← 追加
 ):
     logger.debug("✅ /chat エンドポイントに到達")
     try:
@@ -55,7 +57,13 @@ async def chat(
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        # ✅ 応答文をそのまま返す（JSON含んだ自然文）
+        # 応答生成
+        response = await run_response_pipeline(user_input)
+        logger.debug("🧾 応答生成完了")
+
+        # 応答後にバックグラウンドで保存
+        background_tasks.add_task(save_response_to_memory, response)
+
         return PlainTextResponse(response)
 
     except Exception as e:
