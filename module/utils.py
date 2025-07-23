@@ -46,14 +46,14 @@ def log_to_mongo(level: str, message: str):
 # ログラッパー（ログレベルしきい値で出力制御）
 class MongoLogger:
     def log(self, level: str, message: str):
-    print(f"[LOG WRAPPER] 呼び出しレベル: {level} / 閾値: {LOG_LEVEL_THRESHOLD}")
-    if LEVEL_ORDER[level] >= LEVEL_ORDER[LOG_LEVEL_THRESHOLD]:
-        log_to_mongo(level, message)
+        print(f"[LOG WRAPPER] 呼び出しレベル: {level} / 閾値: {LOG_LEVEL_THRESHOLD}")
+        if LEVEL_ORDER[level] >= LEVEL_ORDER[LOG_LEVEL_THRESHOLD]:
+            log_to_mongo(level, message)
+
     def debug(self, message: str): self.log("DEBUG", message)
     def info(self, message: str): self.log("INFO", message)
     def warning(self, message: str): self.log("WARNING", message)
     def error(self, message: str): self.log("ERROR", message)
-
 # 任意の場所で import して使用
 logger = MongoLogger()
 
