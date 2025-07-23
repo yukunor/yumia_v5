@@ -45,6 +45,7 @@ async def chat(
     file: UploadFile = File(None),
     background_tasks: BackgroundTasks = None
 ):
+    print("📌 loggerの型:", type(logger))  # ← 追加
     logger.debug("✅ /chat エンドポイントに到達")
     print("✅ debug() 実行済み", flush=True)
     try:
