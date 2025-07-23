@@ -177,8 +177,14 @@ def generate_emotion_from_prompt_with_context(
                 emotion_data = json.loads(json_match.group(1))
                 emotion_data["date"] = datetime.now().strftime("%Y%m%d%H%M%S")
 
-                if "構成比" in emotion_data and isinstance(emotion_data["構成比"], str):
-                    emotion_data["構成比"] = json.loads(emotion_data["構成比"])
+                # ✅ 再帰的なパース（構成比が文字列 → dictになるまで繰り返す）
+                if "構成比" in emotion_data:
+                    while isinstance(emotion_data["構成比"], str):
+                        try:
+                            emotion_data["構成比"] = json.loads(emotion_data["構成比"])
+                        except json.JSONDecodeError:
+                            break
+
                 clean_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
 
                 # 🔸 非同期スレッドで感情統合処理を実行
@@ -202,6 +208,7 @@ def generate_emotion_from_prompt_with_context(
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "応答生成でエラーが発生しました。", {}
+
 
 # 🔻 非同期スレッドで感情ベクトル合成・保存・サマリーを実行する関数
 def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
