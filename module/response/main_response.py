@@ -8,7 +8,7 @@ from module.llm.llm_client import generate_gpt_response_from_history
 from module.response.response_short import find_short_history_by_emotion_and_date 
 from module.response.response_intermediate import find_intermediate_history_by_emotion_and_date
 from module.response.response_long import find_long_history_by_emotion_and_date
-from module.utils.utils import mongo_logger as logger
+from module.utils.utils import logger
 
 client = get_mongo_client()
 if client is None:
