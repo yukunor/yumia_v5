@@ -9,13 +9,15 @@ from pymongo import DESCENDING
 from module.mongo.mongo_client import get_mongo_client
 
 
+print("📌 [STEP] utils.py 読み込み開始")
+
 # Renderの環境変数からOpenAIのAPIキーを取得
 openai.api_key = os.getenv("OPENAI_API_KEY")
+print(f"📌 [ENV] OPENAI_API_KEY 読み込み結果: {'あり' if openai.api_key else 'なし'}")
 
 
 # ログレベルのしきい値（必要に応じて "DEBUG" などに変更可能）
-LOG_LEVEL_THRESHOLD = "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
-
+LOG_LEVEL_THRESHOLD = "DEBUG"  # "DEBUG", "INFO", "WARNING", "ERROR"
 
 # ログレベルの優先度
 LEVEL_ORDER = {
@@ -54,12 +56,10 @@ class MongoLogger:
     def warning(self, message: str): self.log("WARNING", message)
     def error(self, message: str): self.log("ERROR", message)
 
+print("📌 [STEP] MongoLogger クラス定義完了")
 
-
-
-
-
-
+logger = MongoLogger()
+print(f"📌 [CHECK] logger の型: {type(logger)}")
 
 
 #　履歴を取得しWeb UI上に100件を上限として表示
@@ -102,7 +102,7 @@ def load_system_prompt_cached():
         with open("system_prompt.txt", "r", encoding="utf-8") as f:
             _cached_system_prompt = f.read().strip()
     return _cached_system_prompt
-    
+
 
 # 会話履歴：保存
 def append_history(role, message):
@@ -120,8 +120,6 @@ def append_history(role, message):
             logger.info(f"[INFO] 履歴をMongoDBに保存: {entry}")
     except Exception as e:
         logger.error(f"[ERROR] 履歴保存に失敗: {e}")
-
-logger = MongoLogger() 
 
 if __name__ == "__main__":
     print("=== Logger Test Start ===", flush=True)
