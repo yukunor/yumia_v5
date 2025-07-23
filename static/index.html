@@ -165,7 +165,7 @@
           formData.append("file", file);
         }
 
-        const response = await fetch("/chat_with_file", {
+        const response = await fetch("/chat", {
           method: "POST",
           body: formData
         });
