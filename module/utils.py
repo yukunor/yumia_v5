@@ -54,7 +54,7 @@ class MongoLogger:
     def warning(self, message: str): self.log("WARNING", message)
     def error(self, message: str): self.log("ERROR", message)
 # 任意の場所で import して使用
-mongo_logger = MongoLogger()
+logger = MongoLogger() 
 
 
 
