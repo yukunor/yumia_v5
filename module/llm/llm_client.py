@@ -197,7 +197,7 @@ def generate_emotion_from_prompt_with_context(
 
 
 # 🔻 非同期スレッドで感情ベクトル合成・保存・サマリーを実行する関数
-def run_emotion_update_pipeline(new_vector: dict):
+async def run_emotion_update_pipeline(new_vector: dict):
     try:
         from module.emotion.emotion_stats import (
             load_current_emotion,
