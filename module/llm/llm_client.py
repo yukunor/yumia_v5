@@ -223,6 +223,9 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
         )
 
         current = load_current_emotion()
+        print(f"[DEBUG] current type: {type(current)}")  # <class 'dict'>
+        print(f"[DEBUG] new_vector type: {type(new_vector)}")  # ← たぶん <class 'str'>
+        print(f"[DEBUG] new_vector content: {new_vector}")
         merged = merge_emotion_vectors(current, new_vector)
         save_current_emotion(merged)
         summary = summarize_feeling(merged)
