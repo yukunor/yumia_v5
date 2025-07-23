@@ -1,7 +1,8 @@
 from openai import OpenAI
 import json
 from datetime import datetime, timedelta
-from utils import logger
+from module.utils.utils import logger
+
 
 client = OpenAI()
 
