@@ -78,7 +78,6 @@ def generate_gpt_response_from_history() -> str:
         return "応答生成中にエラーが発生しました。"
 
 
-
 def generate_emotion_from_prompt_with_context(
     user_input: str,
     emotion_structure: dict,
@@ -141,9 +140,15 @@ def generate_emotion_from_prompt_with_context(
         if data:
             reference_emotions.append(data)
 
-    reference_text = "\n\n【参考感情データ】\n"
+    reference_text = "\n\n【AI自身の記憶（参考感情データ）】\n"
+    reference_text += (
+        "以下は、あなた自身（AI）がこれまでに経験・記録した感情の記憶です。\n"
+        "各ケースは実際のユーザーとの対話に基づいて記録されたものであり、あなたの内的な記憶として保存されています。\n"
+        "これらの記憶を参照しながら、自然で一貫性のある応答を構成してください。\n"
+    )
+
     for i, item in enumerate(reference_emotions, 1):
-        reference_text += f"\n● ケース{i}\n"
+        reference_text += f"\n● 記憶ケース{i}\n"
         reference_text += f"主感情: {item.get('主感情')}\n"
         reference_text += f"構成比: {item.get('構成比')}\n"
         reference_text += f"状況: {item.get('状況')}\n"
