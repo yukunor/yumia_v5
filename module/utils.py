@@ -111,6 +111,10 @@ def save_current_emotion(emotion_vector):
     except Exception as e:
         logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")
 
+
+
+
+
 # 感情ベクトルの合成（加重平均 + 減衰 + 正規化）
 def merge_emotion_vectors(
     current: dict,
