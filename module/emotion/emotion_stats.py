@@ -3,7 +3,7 @@ import os
 import json
 from datetime import datetime
 
-from module.utils.utils import logger
+from module.utils.utils import mongo_logger as logger
 from module.mongo.mongo_client import get_mongo_client  # ロガーとMongo関数のインポート
 
 EMOTION_MAP = {
