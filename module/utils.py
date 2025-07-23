@@ -53,8 +53,7 @@ class MongoLogger:
     def info(self, message: str): self.log("INFO", message)
     def warning(self, message: str): self.log("WARNING", message)
     def error(self, message: str): self.log("ERROR", message)
-# 任意の場所で import して使用
-logger = MongoLogger() 
+
 
 
 
@@ -122,6 +121,7 @@ def append_history(role, message):
     except Exception as e:
         logger.error(f"[ERROR] 履歴保存に失敗: {e}")
 
+logger = MongoLogger() 
 
 if __name__ == "__main__":
     print("=== Logger Test Start ===", flush=True)
