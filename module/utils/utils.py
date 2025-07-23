@@ -6,6 +6,7 @@ import certifi
 import json
 import openai
 from pymongo import DESCENDING
+import traceback
 
 print("📌 [STEP] utils.py 読み込み開始")
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -19,7 +20,9 @@ LEVEL_ORDER = {
     "ERROR": 40
 }
 
-# ✅ log_to_mongo を最初に定義（これがないと MongoLogger の評価に使えない）
+import traceback  # ← 必須
+
+# ✅ log_to_mongo を最初に定義
 def log_to_mongo(level: str, message: str):
     print(f"[CALL] log_to_mongo: {level} - {message}")
     try:
@@ -37,7 +40,7 @@ def log_to_mongo(level: str, message: str):
     except Exception as e:
         print(f"[ERROR] MongoDBログ記録失敗: {e}")
 
-# ✅ 先に MongoLogger を定義（log_to_mongo 使用可能に）
+# ✅ logger定義（errorだけtraceback対応）
 class MongoLogger:
     def log(self, level: str, message: str):
         print(f"[LOG WRAPPER] 呼び出しレベル: {level} / 閾値: {LOG_LEVEL_THRESHOLD}")
@@ -47,13 +50,21 @@ class MongoLogger:
     def debug(self, message: str): self.log("DEBUG", message)
     def info(self, message: str): self.log("INFO", message)
     def warning(self, message: str): self.log("WARNING", message)
-    def error(self, message: str): self.log("ERROR", message)
+
+    def error(self, message: str = "", include_traceback: bool = True):
+        if include_traceback:
+            tb = traceback.format_exc()
+            full_message = f"{message}\n{tb}" if message else tb
+        else:
+            full_message = message
+        self.log("ERROR", full_message)
 
 logger = MongoLogger()
 print(f"📌 [CHECK] logger の型: {type(logger)}")
 
-# MongoDBクライアント（← logger 初期化後にインポート）
+# 🔽 logger初期化後にMongo依存インポート
 from module.mongo.mongo_client import get_mongo_client
+
 
 # MongoDBにログを保存
 def log_to_mongo(level: str, message: str):
