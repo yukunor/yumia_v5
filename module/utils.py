@@ -28,6 +28,7 @@ LEVEL_ORDER = {
 
 # MongoDBへログを保存
 def log_to_mongo(level: str, message: str):
+     print(f"[CALL] log_to_mongo: {level} - {message}")
     try:
         client = get_mongo_client()
         if client:
