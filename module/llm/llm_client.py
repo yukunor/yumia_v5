@@ -211,26 +211,3 @@ def generate_emotion_from_prompt_with_context(
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "応答生成でエラーが発生しました。", {}
 
-
-# 🔻 非同期スレッドで感情ベクトル合成・保存・サマリーを実行する関数
-def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
-    try:
-        from module.emotion.emotion_stats import (
-            load_current_emotion,
-            merge_emotion_vectors,
-            save_current_emotion,
-            summarize_feeling
-        )
-
-        current = load_current_emotion()
-        print(f"[DEBUG] current type: {type(current)}")  # <class 'dict'>
-        print(f"[DEBUG] new_vector type: {type(new_vector)}")  # ← たぶん <class 'str'>
-        print(f"[DEBUG] new_vector content: {new_vector}")
-        merged = merge_emotion_vectors(current, new_vector)
-        save_current_emotion(merged)
-        summary = summarize_feeling(merged)
-        return "感情を更新しました。", summary
-
-    except Exception as e:
-        logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
-        return "感情更新に失敗しました。", {}
