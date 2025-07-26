@@ -33,27 +33,27 @@ def get_mongo_collection(category, emotion_label):
 import json
 
     #文字列がJSON形式ならdictに変換。そうでなければそのまま返す。
-def try_parse_json(text: str) -> dict | str:
+    # 🔹 ステップ1: 完全なJSON文字列として処理を試みる
     try:
         parsed = json.loads(text)
         logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")
         return parsed
     except json.JSONDecodeError:
-        logger.warning(f"[WARN] JSONパース失敗。混在形式の可能性あり → 抽出再試行")
+        logger.warning(f"[WARN] JSONパース失敗。混在形式の可能性あり → 末尾抽出を試行")
 
-    # 正規表現で { ... } を抽出（最初のブロックだけ）
-    match = re.search(r'\{.*?\}', text, re.DOTALL)
-    if match:
-        json_text = match.group(0)
+    # 🔹 ステップ2: 末尾のJSON部分を抽出（最後に現れる { 以降を取り出す）
+    json_start = text.rfind("{")
+    if json_start != -1:
+        json_text = text[json_start:].strip()
         try:
             parsed = json.loads(json_text)
-            logger.info(f"[INFO] JSONパース成功（抽出後）: {parsed}")
+            logger.info(f"[INFO] JSONパース成功（末尾抽出）: {parsed}")
             return parsed
         except json.JSONDecodeError as e2:
-            logger.warning(f"[WARN] JSONパース失敗（抽出後）: {e2}")
+            logger.warning(f"[WARN] JSONパース失敗（末尾抽出）: {e2}")
 
-    # 最後まで失敗した場合は生テキストを返す
-    logger.info(f"[INFO] JSONとして解釈できませんでした。元のテキストを返します。")
+    # 🔹 最後まで失敗した場合はそのまま返す
+    logger.info("[INFO] JSONとして解釈できませんでした。元のテキストを返します。")
     return text
 
     #履歴＋現在感情に基づいて GPT 応答を生成し、整形して返す。
