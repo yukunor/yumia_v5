@@ -36,11 +36,25 @@ import json
 def try_parse_json(text: str) -> dict | str:
     try:
         parsed = json.loads(text)
-        logger.info(f"[INFO] JSONパース成功: {parsed}")
+        logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")
         return parsed
     except json.JSONDecodeError:
-        logger.info(f"[INFO] JSONパース失敗。元のテキストを返します: {text}")
-        return text
+        logger.warning(f"[WARN] JSONパース失敗。混在形式の可能性あり → 抽出再試行")
+
+    # 正規表現で { ... } を抽出（最初のブロックだけ）
+    match = re.search(r'\{.*?\}', text, re.DOTALL)
+    if match:
+        json_text = match.group(0)
+        try:
+            parsed = json.loads(json_text)
+            logger.info(f"[INFO] JSONパース成功（抽出後）: {parsed}")
+            return parsed
+        except json.JSONDecodeError as e2:
+            logger.warning(f"[WARN] JSONパース失敗（抽出後）: {e2}")
+
+    # 最後まで失敗した場合は生テキストを返す
+    logger.info(f"[INFO] JSONとして解釈できませんでした。元のテキストを返します。")
+    return text
 
     #履歴＋現在感情に基づいて GPT 応答を生成し、整形して返す。
 def get_history_based_response() -> dict:
