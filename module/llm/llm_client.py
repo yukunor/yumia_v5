@@ -82,8 +82,12 @@ def generate_emotion_from_prompt_with_context(
     感情構造と参照感情データを用いて、GPTに応答生成を行わせる。
     best_match が None の場合は履歴ベースで応答を生成する。
     """
-    system_prompt = load_system_prompt_cached()
-    user_prompt = load_dialogue_prompt()
+    # 🔧 修正: dialogue_prompt.txt を system_prompt に統合
+    system_prompt = (
+        load_system_prompt_cached()
+        + "\n\n"
+        + load_dialogue_prompt()
+    )
 
     # 🔸 人格傾向の取得と整形（longカテゴリの頻出emotion）
     top4_personality = get_top_long_emotions()
@@ -99,7 +103,6 @@ def generate_emotion_from_prompt_with_context(
         fallback_response = generate_gpt_response_from_history()
 
         prompt = (
-            f"{user_prompt}\n\n"
             f"{personality_text}\n"
             f"ユーザー発言: {user_input}\n"
             f"履歴応答: {fallback_response}\n\n"
@@ -151,11 +154,10 @@ def generate_emotion_from_prompt_with_context(
         reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
 
     prompt = (
-        f"{user_prompt}\n\n"
         f"{personality_text}\n"
         f"ユーザー発言: {user_input}\n"
         f"{reference_text}\n\n"
-        f"【指示】上記の感情参照データと人格傾向を参考に、emotion_promptのルールに従って応答を生成してください。"
+        f"【指示】上記の感情参照データと人格傾向を参考に、emotion_promptのルールに従って応答を生成してください。\n"
         f"自然な応答 + 構成比 + JSON形式の感情構造の順で出力してください。"
     )
 
@@ -210,6 +212,7 @@ def generate_emotion_from_prompt_with_context(
     except Exception as e:
         logger.error(f"[ERROR] 応答生成失敗: {e}")
         return "応答生成でエラーが発生しました。", {}
+
 
 # 🔻 非同期スレッドで感情ベクトル合成・保存・サマリーを実行する関数
 def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
