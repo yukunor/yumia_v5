@@ -168,3 +168,4 @@ def collect_all_category_responses(emotion_name: str, date_str: str) -> dict:
         "short": short_match,
         "intermediate": intermediate_match,
         "long": long_match
+    }
