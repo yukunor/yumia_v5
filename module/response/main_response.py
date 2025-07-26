@@ -32,8 +32,10 @@ def get_mongo_collection(category, emotion_label):
 
 import json
 
+
     #文字列がJSON形式ならdictに変換。そうでなければそのまま返す。
     # 🔹 ステップ1: 完全なJSON文字列として処理を試みる
+def try_parse_json(text: str) -> dict | str:
     try:
         parsed = json.loads(text)
         logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")
