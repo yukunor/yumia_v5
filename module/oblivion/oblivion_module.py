@@ -2,8 +2,8 @@
 
 from module.oblivion.oblivion_intermediate import get_expired_intermediate_emotions, save_oblivion_intermediate_entries
 from module.oblivion.oblivion_short import get_expired_short_emotions, save_oblivion_short_entries
-from module.oblivion.oblivion_purge import delete_expired_oblivion_entries, delete_expired_short_oblivion_entries,
-from module.oblivion.oblivion_index import remove_index_entries_by_date, remove_history_entries_by_date,
+from module.oblivion.oblivion_purge import delete_expired_oblivion_entries, delete_expired_short_oblivion_entries
+from module.oblivion.oblivion_index import remove_index_entries_by_date, remove_history_entries_by_date
 
 
 from module.utils.utils import logger
