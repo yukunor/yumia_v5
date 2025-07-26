@@ -70,6 +70,10 @@ def filter_by_keywords(index_data, input_keywords): #カテゴライズした辞
     print(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
+
+def translate_emotion(emotion: str) -> str:
+    return emotion_map.get(emotion, emotion)
+
 def find_best_match_by_composition(current_composition, candidates):
     print(f"🔎 構成比マッチング対象数: {len(candidates)}")
     print(f"[DEBUG] current_composition type: {type(current_composition)}")
