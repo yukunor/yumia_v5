@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 from module.llm.llm_client import generate_emotion_from_prompt_with_context
 from module.utils.utils import load_history, append_history
 from module.utils.utils import logger
-from module.emotion.main_emotion import save_response_to_memory
+from module.emotion.main_emotion import save_response_to_memory, write_structured_emotion_data
 from module.emotion.emotion_stats import summarize_feeling
 from module.llm.llm_client import run_emotion_update_pipeline
 from module.emotion.emotion_stats import load_current_emotion
