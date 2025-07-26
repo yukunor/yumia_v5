@@ -41,20 +41,21 @@ def try_parse_json(text: str) -> dict | str:
         logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")
         return parsed
     except json.JSONDecodeError:
-        logger.warning(f"[WARN] JSONパース失敗。混在形式の可能性あり → 末尾抽出を試行")
+        logger.warning(f"[WARN] JSONパース失敗。混在形式の可能性あり → 正規表現で抽出を試行")
 
-    # 🔹 ステップ2: 末尾のJSON部分を抽出（最後に現れる { 以降を取り出す）
-    json_start = text.rfind("{")
-    if json_start != -1:
-        json_text = text[json_start:].strip()
-        try:
-            parsed = json.loads(json_text)
-            logger.info(f"[INFO] JSONパース成功（末尾抽出）: {parsed}")
-            return parsed
-        except json.JSONDecodeError as e2:
-            logger.warning(f"[WARN] JSONパース失敗（末尾抽出）: {e2}")
+    # 🔍 正規表現で最も大きな { ... } ブロックを抽出
+    matches = re.findall(r'({.*})', text, re.DOTALL)
+    if matches:
+        for match in reversed(matches):  # 最後の候補から順に試す
+            try:
+                parsed = json.loads(match)
+                logger.info(f"[INFO] JSONパース成功（正規抽出）: {parsed}")
+                return parsed
+            except json.JSONDecodeError as e:
+                logger.warning(f"[WARN] 抽出JSONパース失敗: {e}")
+    else:
+        logger.warning("[WARN] 正規表現によるJSON候補抽出に失敗")
 
-    # 🔹 最後まで失敗した場合はそのまま返す
     logger.info("[INFO] JSONとして解釈できませんでした。元のテキストを返します。")
     return text
 
