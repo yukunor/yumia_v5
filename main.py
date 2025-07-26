@@ -14,7 +14,6 @@ from module.utils.utils import load_history, append_history
 from module.utils.utils import logger
 from module.emotion.main_emotion import save_response_to_memory, write_structured_emotion_data
 from module.emotion.emotion_stats import summarize_feeling
-from module.llm.llm_client import run_emotion_update_pipeline
 from module.emotion.emotion_stats import load_current_emotion
 from module.response.main_responce import find_response_by_emotion, get_best_match, collect_all_category_responses
 from module.emotion.emotion_stats import load_current_emotion, merge_emotion_vectors, save_current_emotion, summarize_feeling
