@@ -70,11 +70,21 @@ def filter_by_keywords(index_data, input_keywords): #カテゴライズした辞
     print(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
-def find_best_match_by_composition(current_composition, candidates):  # long、short、intermediateから類似感情を1つずつ抽出
+def find_best_match_by_composition(current_composition, candidates):
     print(f"🔎 構成比マッチング対象数: {len(candidates)}")
     print(f"[DEBUG] current_composition type: {type(current_composition)}")
     print(f"[DEBUG] current_composition value: {current_composition}")
 
+    # 🔸 スコア計算関数を内包定義
+    def calculate_composition_score(base: dict, target: dict) -> float:
+        shared_keys = set(base.keys()) & set(target.keys())
+        score = 0.0
+        for key in shared_keys:
+            diff = abs(base.get(key, 0) - target.get(key, 0))
+            score += (100 - diff)
+        return score / len(shared_keys) if shared_keys else 0.0
+
+    # 🔸 候補の適格性判定
     def is_valid_candidate(candidate_comp, base_comp):
         print(f"[DEBUG] candidate_comp type: {type(candidate_comp)} / base_comp type: {type(base_comp)}")
         print(f"[DEBUG] candidate_comp: {candidate_comp}")
@@ -108,7 +118,11 @@ def find_best_match_by_composition(current_composition, candidates):  # long、s
         print("❌ 構成比マッチ候補なし")
         return None
 
+    # 🔸 スコア最大の候補を選出
     best = max(valid_candidates, key=lambda c: calculate_composition_score(current_composition, c["構成比"]))
+
+    # 🔸 翻訳（翻訳辞書が別にあればそちらに委譲しても可）
     jp_emotion = translate_emotion(best.get("emotion", "Unknown"))
     print(f"🏅 最も構成比が近い候補を選出: {jp_emotion}")
+
     return best
