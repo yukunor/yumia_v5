@@ -24,7 +24,7 @@ def generate_gpt_response_from_history() -> str:
     logger.info("[START] generate_gpt_response_from_history")
 
     system_prompt = load_system_prompt_cached()
-    user_prompt = load_dialogue_prompt()
+    emotion_prompt = load_emotion_prompt()
 
     # 履歴取得（直近3件）
     logger.info("[INFO] 履歴取得中...")
@@ -58,7 +58,7 @@ def generate_gpt_response_from_history() -> str:
             messages=[
                 {"role": "system", "content": system_prompt},
                 *[{"role": entry["role"], "content": entry["message"]} for entry in selected_history],
-                {"role": "user", "content": f"{emotion_text}\n\n{user_prompt}"}
+                {"role": "user", "content": f"{emotion_text}\n\n{emotion_prompt}"}
             ],
             max_tokens=OPENAI_MAX_TOKENS,
             temperature=OPENAI_TEMPERATURE,
