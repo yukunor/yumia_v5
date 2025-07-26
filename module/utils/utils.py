@@ -102,13 +102,19 @@ def load_history(limit: int = 100) -> list[dict]:
         })
     return history
 
-# プロンプト読み込み
+# プロンプトフォルダのパスを定義
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROMPT_DIR = os.path.join(BASE_DIR, "..", "..", "prompt")
+
+# プロンプト読み込み関数
 def load_emotion_prompt():
-    with open("emotion_prompt.txt", "r", encoding="utf-8") as f:
+    prompt_path = os.path.join(PROMPT_DIR, "emotion_prompt.txt")
+    with open(prompt_path, "r", encoding="utf-8") as f:
         return f.read().strip()
 
 def load_dialogue_prompt():
-    with open("dialogue_prompt.txt", "r", encoding="utf-8") as f:
+    prompt_path = os.path.join(PROMPT_DIR, "dialogue_prompt.txt")
+    with open(prompt_path, "r", encoding="utf-8") as f:
         return f.read().strip()
 
 _cached_system_prompt = None
@@ -116,7 +122,8 @@ _cached_system_prompt = None
 def load_system_prompt_cached():
     global _cached_system_prompt
     if _cached_system_prompt is None:
-        with open("system_prompt.txt", "r", encoding="utf-8") as f:
+        prompt_path = os.path.join(PROMPT_DIR, "system_prompt.txt")
+        with open(prompt_path, "r", encoding="utf-8") as f:
             _cached_system_prompt = f.read().strip()
     return _cached_system_prompt
 
