@@ -31,16 +31,17 @@ def search_long_history(all_data, emotion_name, category_name, target_date):
     取得済みlongデータ群から、emotion・category・dateが一致する履歴1件を探して返す。
     MongoDBを再度呼び出さずにローカル検索のみで完結。
     """
-    for item in all_data:
-        if item.get("emotion") == emotion_name and item.get("category") == category_name:
-            history_list = item.get("data", {}).get("履歴", [])
-            for record in history_list:
-                if record.get("date") == target_date:
-                    logger.info("✅ 感情履歴の一致データを発見（long）")
-                    return record
+    try:
+        for item in all_data:
+            if item.get("emotion") == emotion_name and item.get("category") == category_name:
+                history_list = item.get("data", {}).get("履歴", [])
+                for record in history_list:
+                    if record.get("date") == target_date:
+                        logger.info("✅ 感情履歴の一致データを発見（long）")
+                        return record
 
-    logger.info("🔍 emotion/categoryは一致したが、dateの一致は見つかりませんでした（long）")
-    return None
+        logger.info("🔍 emotion/categoryは一致したが、dateの一致は見つかりませんでした（long）")
+        return None
 
     except Exception as e:
         logger.error(f"[ERROR] 感情履歴検索中にエラー発生: {e}")
