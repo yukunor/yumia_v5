@@ -17,6 +17,7 @@ from module.emotion.emotion_stats import summarize_feeling
 from module.llm.llm_client import run_emotion_update_pipeline
 from module.emotion.emotion_stats import load_current_emotion
 from module.response.main_responce import find_response_by_emotion, get_best_match, collect_all_category_responses
+from module.emotion.emotion_stats import load_current_emotion, merge_emotion_vectors, save_current_emotion, summarize_feeling
 
 import inspect
 print(f"📌 loggerの型（main.py）: {type(logger)}")
@@ -65,11 +66,11 @@ async def chat(message: str = Form(...), file: UploadFile = File(None), backgrou
             if extracted_text:
                 user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
 
-         # 🔸 履歴に保存
+        # 🔸 履歴に保存
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        # 🔸 ②現在感情をロード
+        logger.debug(f"②現在感情をロード")
         # 🔸  MongoDBからインデックス取得
         index_data = load_index()
         # 🔸  現在感情ベクトルの読み込み
@@ -91,8 +92,8 @@ async def chat(message: str = Form(...), file: UploadFile = File(None), backgrou
 
             if best_match:
                 logger.info("[STEP] インデックスにマッチした応答を取得")
-                append_history("assistant", best_match.get("応答", ""))
-                return {"response": best_match.get("応答", "")}
+                response_text = best_match.get("応答", "")
+                append_history("assistant", response_text)
 
             else:
                 # 🔸 ⑤ マッチがなければ履歴を検索
@@ -109,45 +110,74 @@ async def chat(message: str = Form(...), file: UploadFile = File(None), backgrou
                     # 優先順位で応答候補を返す（short > intermediate > long）
                     for cat in ["short", "intermediate", "long"]:
                         if matched.get(cat):
-                            reply = matched[cat].get("応答", "")
+                            response_text = matched[cat].get("応答", "")
                             logger.info(f"[STEP] 履歴から {cat} カテゴリの応答を返却")
-                            append_history("assistant", reply)
-                            return {"response": reply}
+                            append_history("assistant", response_text)
+                            break
 
-                logger.warning("[WARN] 履歴にも一致する応答が見つかりませんでした")
-                fallback_message = "ごめんなさい、うまく思い出せませんでした。"
-                append_history("assistant", fallback_message)
-                return {"response": fallback_message}
+                if not response_text:
+                    logger.warning("[WARN] 履歴にも一致する応答が見つかりませんでした")
+                    response_text = "ごめんなさい、うまく思い出せませんでした。"
+                    append_history("assistant", response_text)
 
         else:
             # JSONでない（text出力）の場合、文字列として扱う
             logger.info("[STEP] GPT応答が構造化されていないため、生の応答を返却")
             append_history("assistant", response_text)
-            return {"response": response_text}
 
-        #🔸llm呼び出し(2回目)
+        # 🔸llm呼び出し(2回目)
         final_response, final_emotion = generate_emotion_from_prompt_with_context(
             user_input=user_input,
             emotion_structure=emotion_data.get("構成比", {}),
             best_match=get_best_match(emotion_data)
         )
 
+        # 🔸 応答を履歴に記録
         append_history("assistant", final_response)
-        return {"response": final_response}
-        
 
-        # 🔸 感情構成比の抽出と保存・サマリー処理
-        composition = emotion_data.get("構成比", {})
-        update_message, summary = run_emotion_update_pipeline(composition)
+        # 🔸 GPT応答から構造データを抽出
+        parsed_emotion_data = save_response_to_memory(final_response)
 
-        # 🔸 ログ出力（6感情サマリー）
-        if summary:
-            logger.info("🧠 感情サマリー:")
-            for k, v in summary.items():
-                logger.info(f"  {k}: {v}")
+        # 🔸 構造データをMongoDBに保存（抽出成功時）
+        if parsed_emotion_data:
+                write_structured_emotion_data(parsed_emotion_data)
+                emotion_to_merge = parsed_emotion_data.get("構成比", final_emotion)
+        else:
+                logger.warning("⚠ 構造データ抽出失敗 → 直接生成した感情構成比を使用")
+                emotion_to_merge = final_emotion
 
-        return {"response": response_text, "summary": summary}
+        # 🔸 現在の感情（MongoDB Atlasから）を再取得
+        latest_emotion = load_current_emotion()
+
+        # 🔸 合成処理（既存 + 新しい感情）
+        merged_emotion = merge_emotion_vectors(
+                current=latest_emotion,
+                new=emotion_to_merge,
+                weight_new=0.3,
+                decay_factor=0.9,
+                normalize=True
+        )
+
+        # 🔸 合成後の感情をMongoDBに保存
+        save_current_emotion(merged_emotion)
+
+        # 🔸 6感情の要約を出力
+        summary = summarize_feeling(merged_emotion)
+
+        # 🔸 最後に WebUI に返答
+        return {
+                "response": final_response,
+                "summary": summary
+        }
+
 
     except Exception as e:
         logger.error(f"❌ エラー発生: {e}")
         return PlainTextResponse("エラーが発生しました。", status_code=500)
+
+def store_emotion_structured_data(response_text: str):
+    parsed_emotion_data = save_response_to_memory(response_text)
+    if parsed_emotion_data:
+        write_structured_emotion_data(parsed_emotion_data)
+    else:
+        logger.warning("⚠ 背景タスク：構造データの抽出に失敗したため、保存をスキップ")
