@@ -176,6 +176,7 @@ async def chat(message: str = Form(...), file: UploadFile = File(None), backgrou
         return PlainTextResponse("エラーが発生しました。", status_code=500)
 
 def store_emotion_structured_data(response_text: str):
+    logger.info("🧩 store_emotion_structured_data() が呼び出されました")
     parsed_emotion_data = save_response_to_memory(response_text)
     if parsed_emotion_data:
         write_structured_emotion_data(parsed_emotion_data)
