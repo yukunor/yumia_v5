@@ -21,38 +21,40 @@ EMOTION_TRANSLATION = {
     "不安": "Anxiety", "愛": "Love", "希望": "Hope", "優位": "Dominance"
 }
 
+#応答テキストの中から感情構造JSONを抽出し、辞書形式で返す。
 def save_response_to_memory(response_text: str) -> dict | None:
-    """
-    応答テキストの中から感情構造JSONを抽出し、辞書形式で返す。
-    保存はこの関数では行わない。
-    """
     try:
         logger.debug("💾 save_response_to_memory 開始")
 
-        # 🔍 JSON部分の抽出（{}の最初のブロックを想定）
-        match = re.search(r"\{[\s\S]*?\}", response_text)
-        if not match:
-            logger.warning("⚠ 応答にJSONデータが含まれていません")
-            return None
-
-        json_part = match.group()
+        # まず完全なJSONかどうかを試す
         try:
-            parsed_data = json.loads(json_part)
-        except json.JSONDecodeError as e:
-            logger.warning(f"⚠ JSONパース失敗: {e}")
-            return None
+            parsed = json.loads(response_text)
+            logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")
+            return parsed
+        except json.JSONDecodeError:
+            logger.warning("⚠ JSONパース失敗。混在形式の可能性あり → 正規表現で抽出を試行")
 
-        logger.debug(f"📦 構造化データ抽出成功: {parsed_data}")
-        return parsed_data
+        # 🔍 正規表現で { ... } ブロックを複数抽出し、末尾から順に試す
+        matches = re.findall(r'({.*})', response_text, re.DOTALL)
+        if matches:
+            for match in reversed(matches):
+                try:
+                    parsed = json.loads(match)
+                    logger.info(f"[INFO] JSONパース成功（正規抽出）: {parsed}")
+                    return parsed
+                except json.JSONDecodeError as e:
+                    logger.warning(f"[WARN] 抽出JSONパース失敗: {e}")
+        else:
+            logger.warning("[WARN] 正規表現によるJSON候補抽出に失敗")
 
     except Exception as e:
         logger.error(f"❌ 構造データ抽出中に例外発生: {e}")
-        return None
 
+    logger.info("📭 JSON抽出に失敗。Noneを返します。")
+    return None
+
+#抽出済みの感情構造データ（JSON）を MongoDB Atlas の emotion_db.emotion_data に保存する。
 def write_structured_emotion_data(data: dict):
-    """
-    抽出済みの感情構造データ（JSON）を MongoDB Atlas の emotion_db.emotion_data に保存する。
-    """
     try:
         client = get_mongo_client()
         if client is None:
