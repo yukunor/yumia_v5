@@ -6,7 +6,7 @@ from datetime import datetime
 
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
-from module.index.index_emotion import save_index_data
+from module.emotion.index_emotion import save_index_data
 
 
 # 主感情の日本語 → 英語マッピング
