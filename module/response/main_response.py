@@ -9,7 +9,6 @@ import module.response.response_intermediate as intermediate_history
 import module.response.response_short as short_history
 from module.mongo.mongo_client import get_mongo_client
 from module.llm.llm_client import generate_gpt_response_from_history
-from module.response.response_short import find_short_history_by_emotion_and_date
 from module.utils.utils import logger
 
 
