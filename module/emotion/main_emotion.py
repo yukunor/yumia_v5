@@ -1,3 +1,4 @@
+#module/emotion/main_emotion.py
 import os
 import json
 import re
@@ -5,6 +6,8 @@ from datetime import datetime
 
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
+from module.index.index_emotion import save_index_data
+
 
 # 主感情の日本語 → 英語マッピング
 EMOTION_TRANSLATION = {
@@ -86,6 +89,17 @@ def write_structured_emotion_data(data: dict):
         # MongoDBへ保存（新規挿入）
         result = collection.insert_one(document)
         logger.info(f"✅ MongoDB保存成功: _id={result.inserted_id}, 感情={main_emotion_en}, カテゴリ={category}")
+        
+        # 🔄 インデックスにも同時保存(emotion_index.py)
+        if "date" in data:
+            save_index_data(
+                data=data,
+                emotion_en=main_emotion_en,
+                category=category
+            )
+        else:
+            logger.warning("⚠ dateが存在しないためインデックス保存スキップ")
 
     except Exception as e:
         logger.error(f"❌ 感情構造データ保存失敗: {e}")
+        
