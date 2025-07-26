@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
-from module.llm.llm_client import generate_emotion_from_prompt_with_context
+from module.llm.llm_client import generate_emotion_from_prompt_with_context, generate_gpt_response_from_history
 from module.utils.utils import load_history, append_history
 from module.utils.utils import logger
 from module.emotion.main_emotion import save_response_to_memory, write_structured_emotion_data
