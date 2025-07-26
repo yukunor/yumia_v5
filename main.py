@@ -16,6 +16,7 @@ from module.emotion.main_emotion import save_response_to_memory, write_structure
 from module.emotion.emotion_stats import summarize_feeling
 from module.emotion.emotion_stats import load_current_emotion
 from module.response.main_response import find_response_by_emotion, get_best_match, collect_all_category_responses
+from module.response.response_index import load_index
 from module.emotion.emotion_stats import load_current_emotion, merge_emotion_vectors, save_current_emotion, summarize_feeling
 from module.oblivion.oblivion_module import run_oblivion_cleanup_all
 
