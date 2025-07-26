@@ -4,9 +4,9 @@ import os
 from bson import ObjectId
 
 import module.response.response_index as response_index
-import module.response.responce_long as long_history
-import module.response.responce_intermediate as intermediate_history
-import module.response.responce_short as short_history
+import module.response.response_long as long_history
+import module.response.response_intermediate as intermediate_history
+import module.response.response_short as short_history
 from module.mongo.mongo_client import get_mongo_client
 from module.llm.llm_client import generate_gpt_response_from_history
 from module.response.response_short import find_short_history_by_emotion_and_date
