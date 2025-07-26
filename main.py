@@ -35,6 +35,7 @@ def get_ui():
     return FileResponse("static/index.html")
 
 @app.get("/history")
+#過去履歴をチャット欄に呼び出し
 def get_history():
     try:
         return {"history": load_history()}
@@ -43,14 +44,11 @@ def get_history():
         raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
 
 @app.post("/chat")
-async def chat(
-    message: str = Form(...),
-    file: UploadFile = File(None),
-    background_tasks: BackgroundTasks = None
-):
-    print(f"📌 loggerの型: {type(logger)}")
+async def chat(message: str = Form(...), file: UploadFile = File(None), background_tasks: BackgroundTasks = None):
+    #①エンドポイントに到達
+    logger.info(f"📌 loggerの型: {type(logger)}")
     logger.debug("✅ /chat エンドポイントに到達")
-    print("✅ debug() 実行済み", flush=True)
+    logger.info("✅ debug() 実行済み", flush=True)
 
     try:
         user_input = message
@@ -62,6 +60,14 @@ async def chat(
             extracted_text = await handle_uploaded_file(file)
             if extracted_text:
                 user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
+
+        #②現在感情をロード
+        # MongoDBからインデックス取得
+        index_data = load_index()
+        # 現在感情ベクトルの読み込み
+        current_emotion = load_current_emotion()
+        logger.debug(f"🎯 [INFO] 現在感情ベクトル: {current_emotion}")
+        
 
         # 🔸 履歴に保存
         append_history("user", user_input)
