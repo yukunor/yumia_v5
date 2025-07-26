@@ -1,4 +1,4 @@
-#module/responce/responce_short.py
+#module/response/response_short.py
 import json
 from bson import ObjectId
 
