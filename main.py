@@ -15,6 +15,8 @@ from module.utils.utils import logger
 from module.emotion.main_emotion import save_response_to_memory
 from module.emotion.emotion_stats import summarize_feeling
 from module.llm.llm_client import run_emotion_update_pipeline
+from module.emotion.emotion_stats import load_current_emotion
+from module.response.main_responce import find_response_by_emotion, get_best_match, collect_all_category_responses
 
 import inspect
 print(f"📌 loggerの型（main.py）: {type(logger)}")
@@ -26,7 +28,9 @@ class UserMessage(BaseModel):
     message: str
 
 def sanitize_output_for_display(text: str) -> str:
-    text = re.sub(r"```json\s*\{.*?\}\s*```", "", text, flags=re.DOTALL)
+    text = re.sub(r"
+json\s*\{.*?\}\s*
+", "", text, flags=re.DOTALL)
     text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", text, flags=re.DOTALL)
     return text.strip()
 
@@ -61,21 +65,76 @@ async def chat(message: str = Form(...), file: UploadFile = File(None), backgrou
             if extracted_text:
                 user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
 
-        #②現在感情をロード
-        # MongoDBからインデックス取得
-        index_data = load_index()
-        # 現在感情ベクトルの読み込み
-        current_emotion = load_current_emotion()
-        logger.debug(f"🎯 [INFO] 現在感情ベクトル: {current_emotion}")
-        
-
-        # 🔸 履歴に保存
+         # 🔸 履歴に保存
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        # 🔸 感情推定と応答生成
-        response_text, emotion_data = generate_emotion_from_prompt_with_context(user_input)
-        logger.debug("🧾 応答生成完了")
+        # 🔸 ②現在感情をロード
+        # 🔸  MongoDBからインデックス取得
+        index_data = load_index()
+        # 🔸  現在感情ベクトルの読み込み
+        current_emotion = load_current_emotion()
+        logger.debug(f"🎯 [INFO] 現在感情ベクトル: {current_emotion}")
+
+        #llm呼び出し（1回目)
+        response_text = generate_gpt_response_from_history()
+        print(f"📨 GPT応答:\n{response_text}")
+
+        # 🔸 ③ 応答がJSON形式か判定し、構成比とキーワード抽出
+        emotion_data = find_response_by_emotion()
+
+        if emotion_data["type"] == "extracted":
+            logger.info("[STEP] GPT応答から構成比とキーワードを取得済")
+
+            # 🔸 ④ インデックスからベストマッチ検索
+            best_match = get_best_match(emotion_data)
+
+            if best_match:
+                logger.info("[STEP] インデックスにマッチした応答を取得")
+                append_history("assistant", best_match.get("応答", ""))
+                return {"response": best_match.get("応答", "")}
+
+            else:
+                # 🔸 ⑤ マッチがなければ履歴を検索
+                from datetime import datetime
+                dominant_emotion = next(iter(emotion_data["構成比"]), None)
+
+                if dominant_emotion:
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    matched = collect_all_category_responses(
+                        emotion_name=dominant_emotion,
+                        date_str=today
+                    )
+
+                    # 優先順位で応答候補を返す（short > intermediate > long）
+                    for cat in ["short", "intermediate", "long"]:
+                        if matched.get(cat):
+                            reply = matched[cat].get("応答", "")
+                            logger.info(f"[STEP] 履歴から {cat} カテゴリの応答を返却")
+                            append_history("assistant", reply)
+                            return {"response": reply}
+
+                logger.warning("[WARN] 履歴にも一致する応答が見つかりませんでした")
+                fallback_message = "ごめんなさい、うまく思い出せませんでした。"
+                append_history("assistant", fallback_message)
+                return {"response": fallback_message}
+
+        else:
+            # JSONでない（text出力）の場合、文字列として扱う
+            logger.info("[STEP] GPT応答が構造化されていないため、生の応答を返却")
+            append_history("assistant", response_text)
+            return {"response": response_text}
+
+        #🔸llm呼び出し(2回目)
+        final_response, final_emotion = generate_emotion_from_prompt_with_context(
+            user_input=user_input,
+            emotion_structure=emotion_data.get("構成比", {}),
+            best_match=get_best_match(emotion_data)
+        )
+
+        append_history("assistant", final_response)
+        return {"response": final_response}
+        
 
         # 🔸 感情構成比の抽出と保存・サマリー処理
         composition = emotion_data.get("構成比", {})
