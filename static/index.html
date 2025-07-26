@@ -171,7 +171,8 @@
         });
 
         const data = await response.json();
-        typeMessage(systemDiv, data.message);
+        typeMessage(systemDiv, data.response);
+
       } catch (e) {
         systemDiv.textContent = "エラーが発生しました";
       }
