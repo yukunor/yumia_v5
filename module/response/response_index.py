@@ -1,44 +1,46 @@
-#module/response/response_index.py
-import json
-import os
-import re
-from bson import ObjectId
+# module/response/response_index.py
 
-from module.utils.utils import logger
-from module.mongo.mongo_client import get_mongo_client
-from module.llm.llm_client import generate_gpt_response_from_history
-from module.params import emotion_map
-
-
-def search_index_response(composition: dict, keywords: list[str]) -> dict: #検索用の構成比とキーワードの受取
+# 構成比とキーワードを受け取る検索インターフェース
+# Search interface that receives composition and keywords
+def search_index_response(composition: dict, keywords: list[str]) -> dict:
     composition = emotion_structure.get("構成比", {})
+    # Extract composition ratio
     keywords = emotion_structure.get("keywords", [])
+    # Extract keywords
 
-def translate_emotion(emotion): #英語の感情名を日本語に変換
+# 英語の感情名を日本語に変換
+# Convert emotion name from English to Japanese
+def translate_emotion(emotion): 
     return emotion_map.get(emotion, emotion)
 
+# 受け取った構成比（部分的）を emotion_map 順に整形（不足は0で埋める）
+# Normalize partial composition vector in the order of emotion_map (fill missing with 0)
 def normalize_composition_vector(partial_composition: dict) -> dict: 
-    """
-    受け取った構成比（部分的）を emotion_map 順に整形（不足は0で埋める）
-    """
     return {jp_emotion: partial_composition.get(jp_emotion, 0) for jp_emotion in emotion_map.values()}
 
+# MongoDBからemotion_indexを取得
+# Load emotion_index from MongoDB
 def load_index():
     logger.debug("📥 [STEP] MongoDBからemotion_indexを取得します...")
     try:
         client = get_mongo_client()
         if client is None:
             raise ConnectionError("MongoDBクライアントの取得に失敗しました")
+        # Failed to obtain MongoDB client
         db = client["emotion_db"]
         collection = db["emotion_index"]
         data = list(collection.find({}))
         logger.info(f"✅ [SUCCESS] emotion_index データ件数: {len(data)}")
+        # Number of emotion_index records
         return data
     except Exception as e:
         logger.warning(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
+        # Failed to retrieve from MongoDB
         return []
 
-def load_and_categorize_index(): #取得したemotion_db.emotion_indexをcategoryごとに分類分け
+# 取得したemotion_indexをカテゴリごとに分類
+# Categorize loaded emotion_index data by category
+def load_and_categorize_index():
     logger.info("📂 [STEP] インデックスをカテゴリごとに分類します...")
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
@@ -50,25 +52,32 @@ def load_and_categorize_index(): #取得したemotion_db.emotion_indexをcategor
 
     for cat, items in categorized.items():
         logger.debug(f"📊 {cat}カテゴリ: {len(items)} 件")
+        # Number of records per category
 
     return categorized
 
-def filter_by_keywords(index_data, input_keywords): #カテゴライズした辞書形式のemotion_indexからキーワード検索を実施
+# キーワードフィルタリング処理
+# Perform keyword filtering on categorized emotion_index
+def filter_by_keywords(index_data, input_keywords):
     logger.info(f"🔍 キーワードフィルタ適用: {input_keywords}")
     filtered = [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
     logger.info(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
-
+# 英語の感情名を日本語に変換（重複あり）
+# Convert English emotion name to Japanese (duplicate)
 def translate_emotion(emotion: str) -> str:
     return emotion_map.get(emotion, emotion)
 
+# 構成比の一致スコアに基づき最も近い候補を選出
+# Find best match based on similarity of emotion composition
 def find_best_match_by_composition(current_composition, candidates):
     logger.info(f"🔎 構成比マッチング対象数: {len(candidates)}")
     logger.debug(f"[DEBUG] current_composition type: {type(current_composition)}")
     logger.debug(f"[DEBUG] current_composition value: {current_composition}")
 
-    # 🔸 スコア計算関数を内包定義
+    # 🔸 スコア計算関数
+    # Score calculation function
     def calculate_composition_score(base: dict, target: dict) -> float:
         shared_keys = set(base.keys()) & set(target.keys())
         score = 0.0
@@ -78,6 +87,7 @@ def find_best_match_by_composition(current_composition, candidates):
         return score / len(shared_keys) if shared_keys else 0.0
 
     # 🔸 候補の適格性判定
+    # Validity check for candidate
     def is_valid_candidate(candidate_comp, base_comp):
         logger.debug(f"[DEBUG] candidate_comp type: {type(candidate_comp)} / base_comp type: {type(base_comp)}")
         logger.debug(f"[DEBUG] candidate_comp: {candidate_comp}")
@@ -111,11 +121,14 @@ def find_best_match_by_composition(current_composition, candidates):
         logger.warning("❌ 構成比マッチ候補なし")
         return None
 
-    # 🔸 スコア最大の候補を選出
+    # 🔸 最もスコアが高い候補を選出
+    # Select candidate with highest similarity score
     best = max(valid_candidates, key=lambda c: calculate_composition_score(current_composition, c["構成比"]))
 
-    # 🔸 翻訳（翻訳辞書が別にあればそちらに委譲しても可）
+    # 🔸 結果の翻訳表示
+    # Translate and log best match
     jp_emotion = translate_emotion(best.get("emotion", "Unknown"))
     logger.info(f"🏅 最も構成比が近い候補を選出: {jp_emotion}")
 
     return best
+
