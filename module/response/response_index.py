@@ -35,7 +35,7 @@ def normalize_composition_vector(partial_composition: dict) -> dict:
     return {jp_emotion: partial_composition.get(jp_emotion, 0) for jp_emotion in emotion_map.values()}
 
 def load_index():
-    print("📥 [STEP] MongoDBからemotion_indexを取得します...")
+    logger.debug("📥 [STEP] MongoDBからemotion_indexを取得します...")
     try:
         client = get_mongo_client()
         if client is None:
@@ -43,14 +43,14 @@ def load_index():
         db = client["emotion_db"]
         collection = db["emotion_index"]
         data = list(collection.find({}))
-        print(f"✅ [SUCCESS] emotion_index データ件数: {len(data)}")
+        logger.info(f"✅ [SUCCESS] emotion_index データ件数: {len(data)}")
         return data
     except Exception as e:
-        print(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
+        logger.warning(f"❌ [ERROR] MongoDBからの取得に失敗: {e}")
         return []
 
 def load_and_categorize_index(): #取得したemotion_db.emotion_indexをcategoryごとに分類分け
-    print("📂 [STEP] インデックスをカテゴリごとに分類します...")
+    logger.info("📂 [STEP] インデックスをカテゴリごとに分類します...")
     all_index = load_index()
     categorized = {"long": [], "intermediate": [], "short": []}
 
@@ -60,14 +60,14 @@ def load_and_categorize_index(): #取得したemotion_db.emotion_indexをcategor
             categorized[category].append(item)
 
     for cat, items in categorized.items():
-        print(f"📊 {cat}カテゴリ: {len(items)} 件")
+        logger.debug(f"📊 {cat}カテゴリ: {len(items)} 件")
 
     return categorized
 
 def filter_by_keywords(index_data, input_keywords): #カテゴライズした辞書形式のemotion_indexからキーワード検索を実施
-    print(f"🔍 キーワードフィルタ適用: {input_keywords}")
+    logger.info(f"🔍 キーワードフィルタ適用: {input_keywords}")
     filtered = [item for item in index_data if set(item.get("キーワード", [])) & set(input_keywords)]
-    print(f"🎯 一致件数: {len(filtered)}")
+    logger.info(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
 
@@ -75,9 +75,9 @@ def translate_emotion(emotion: str) -> str:
     return emotion_map.get(emotion, emotion)
 
 def find_best_match_by_composition(current_composition, candidates):
-    print(f"🔎 構成比マッチング対象数: {len(candidates)}")
-    print(f"[DEBUG] current_composition type: {type(current_composition)}")
-    print(f"[DEBUG] current_composition value: {current_composition}")
+    logger.info(f"🔎 構成比マッチング対象数: {len(candidates)}")
+    logger.debug(f"[DEBUG] current_composition type: {type(current_composition)}")
+    logger.debug(f"[DEBUG] current_composition value: {current_composition}")
 
     # 🔸 スコア計算関数を内包定義
     def calculate_composition_score(base: dict, target: dict) -> float:
@@ -90,15 +90,15 @@ def find_best_match_by_composition(current_composition, candidates):
 
     # 🔸 候補の適格性判定
     def is_valid_candidate(candidate_comp, base_comp):
-        print(f"[DEBUG] candidate_comp type: {type(candidate_comp)} / base_comp type: {type(base_comp)}")
-        print(f"[DEBUG] candidate_comp: {candidate_comp}")
-        print(f"[DEBUG] base_comp: {base_comp}")
+        logger.debug(f"[DEBUG] candidate_comp type: {type(candidate_comp)} / base_comp type: {type(base_comp)}")
+        logger.debug(f"[DEBUG] candidate_comp: {candidate_comp}")
+        logger.debug(f"[DEBUG] base_comp: {base_comp}")
 
         try:
             base_filtered = {k: v for k, v in base_comp.items() if v > 5}
             cand_filtered = {k: v for k, v in candidate_comp.items() if v > 5}
         except AttributeError as e:
-            print(f"[ERROR] .items() 呼び出し失敗: {e}")
+            logger.warning(f"[ERROR] .items() 呼び出し失敗: {e}")
             return False
 
         base_keys = list(base_filtered.keys())
@@ -117,9 +117,9 @@ def find_best_match_by_composition(current_composition, candidates):
         c for c in candidates if is_valid_candidate(c["構成比"], current_composition)
     ]
 
-    print(f"✅ 有効な候補数: {len(valid_candidates)}")
+    logger.info(f"✅ 有効な候補数: {len(valid_candidates)}")
     if not valid_candidates:
-        print("❌ 構成比マッチ候補なし")
+        logger.warning("❌ 構成比マッチ候補なし")
         return None
 
     # 🔸 スコア最大の候補を選出
@@ -127,6 +127,6 @@ def find_best_match_by_composition(current_composition, candidates):
 
     # 🔸 翻訳（翻訳辞書が別にあればそちらに委譲しても可）
     jp_emotion = translate_emotion(best.get("emotion", "Unknown"))
-    print(f"🏅 最も構成比が近い候補を選出: {jp_emotion}")
+    logger.info(f"🏅 最も構成比が近い候補を選出: {jp_emotion}")
 
     return best
