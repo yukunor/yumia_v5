@@ -11,35 +11,38 @@ from module.emotion.index_emotion import save_index_data
 from module.params import emotion_map
 
 # 応答テキストの中から感情構造JSONを抽出し、辞書形式で返す。
+# Extract emotion structure JSON from response text and return as a dictionary.
 def save_response_to_memory(response_text: str) -> dict | None:
     try:
-        logger.debug("💾 save_response_to_memory 開始")
+        logger.debug("💾 save_response_to_memory 開始")  # save_response_to_memory start
 
         # まず完全なJSONかどうかを試す
+        # First, try if it's a complete JSON
         try:
             parsed = json.loads(response_text)
-            logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")
+            logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")  # JSON parse succeeded (direct)
             return parsed
         except json.JSONDecodeError:
-            logger.warning("⚠ JSONパース失敗。混在形式の可能性あり → 正規表現で抽出を試行")
+            logger.warning("⚠ JSONパース失敗。混在形式の可能性あり → 正規表現で抽出を試行")  # JSON parse failed, possibly mixed format → try extraction by regex
 
         # 🔍 正規表現で { ... } ブロックを複数抽出し、末尾から順に試す
+        # Extract multiple { ... } blocks by regex and try from the end
         matches = re.findall(r'({.*})', response_text, re.DOTALL)
         if matches:
             for match in reversed(matches):
                 try:
                     parsed = json.loads(match)
-                    logger.info(f"[INFO] JSONパース成功（正規抽出）: {parsed}")
+                    logger.info(f"[INFO] JSONパース成功（正規抽出）: {parsed}")  # JSON parse succeeded (regex extraction)
                     return parsed
                 except json.JSONDecodeError as e:
-                    logger.warning(f"[WARN] 抽出JSONパース失敗: {e}")
+                    logger.warning(f"[WARN] 抽出JSONパース失敗: {e}")  # Extracted JSON parse failed
         else:
-            logger.warning("[WARN] 正規表現によるJSON候補抽出に失敗")
+            logger.warning("[WARN] 正規表現によるJSON候補抽出に失敗")  # Failed to extract JSON candidate by regex
 
     except Exception as e:
-        logger.error(f"❌ 構造データ抽出中に例外発生: {e}")
+        logger.error(f"❌ 構造データ抽出中に例外発生: {e}")  # Exception occurred during structure data extraction
 
-    logger.info("📭 JSON抽出に失敗。Noneを返します。")
+    logger.info("📭 JSON抽出に失敗。Noneを返します。")  # JSON extraction failed, returning None
     return None
 
 # 抽出済みの感情構造データ（JSON）を MongoDB Atlas の emotion_db.emotion_data に保存する。
