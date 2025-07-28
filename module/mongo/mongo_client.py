@@ -2,6 +2,7 @@ import os
 import certifi
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
+from module.utils.utils import logger
 
 _mongo_client = None
 
