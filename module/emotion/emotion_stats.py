@@ -1,24 +1,15 @@
-#module/emorion/emotion_stats.py
+# module/emotion/emotion_stats.py
 import os
 import json
 from datetime import datetime
 
 from module.utils.utils import logger
-from module.mongo.mongo_client import get_mongo_client  # ロガーとMongo関数のインポート
+from module.mongo.mongo_client import get_mongo_client
+from module.params import emotion_map, emotion_map_reverse  # ✅ 差し替えポイント
 
-EMOTION_MAP = {
-    "喜び": "Joy", "期待": "Anticipation", "怒り": "Anger", "嫌悪": "Disgust", "悲しみ": "Sadness",
-    "驚き": "Surprise", "恐れ": "Fear", "信頼": "Trust", "楽観": "Optimism", "誇り": "Pride",
-    "病的状態": "Morbidness", "積極性": "Aggressiveness", "冷笑": "Cynicism", "悲観": "Pessimism",
-    "軽蔑": "Contempt", "羨望": "Envy", "憤慨": "Outrage", "自責": "Remorse", "不信": "Unbelief",
-    "恥": "Shame", "失望": "Disappointment", "絶望": "Despair", "感傷": "Sentimentality", "畏敬": "Awe",
-    "好奇心": "Curiosity", "歓喜": "Delight", "服従": "Submission", "罪悪感": "Guilt", "不安": "Anxiety",
-    "愛": "Love", "希望": "Hope", "優位": "Dominance"
-}
-
-# 🔸 構成比を32感情に正規化
+# 🔸 構成比を32感情に正規化（日本語キー順）
 def normalize_composition_vector(raw_composition: dict) -> dict:
-    return {emotion: raw_composition.get(emotion, 0) for emotion in EMOTION_MAP.keys()}
+    return {emotion: raw_composition.get(emotion, 0) for emotion in emotion_map_reverse.keys()}
 
 # 現在感情：読み込み
 def load_current_emotion():
@@ -33,7 +24,7 @@ def load_current_emotion():
         logger.error(f"[ERROR] 現在感情の読み込みに失敗: {e}")
         return {}
 
-# 感情ベクトル合成処理（あなたの既存関数）
+# 感情ベクトル合成処理
 def merge_emotion_vectors(
     current: dict,
     new: dict,
@@ -75,8 +66,6 @@ def save_current_emotion(emotion_vector):
     except Exception as e:
         logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")
 
-
-
 # 32感情ベクトル → 6感情要約
 def summarize_feeling(feeling_vector: dict) -> dict:
     summary = {
@@ -95,3 +84,4 @@ def summarize_feeling(feeling_vector: dict) -> dict:
         print(f"  {k}: {v}")
 
     return summary
+
