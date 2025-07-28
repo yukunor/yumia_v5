@@ -1,25 +1,39 @@
 # config/params.py
 
 # OpenAI設定
+# OpenAI settings
 OPENAI_MODEL = "gpt-4o"
 OPENAI_TEMPERATURE = 0.7
 OPENAI_TOP_P = 1.0
 OPENAI_MAX_TOKENS = 1500
 
 # 感情関連パラメーター
+# Emotion-related parameters
 EMOTION_THRESHOLD = 10  # 構成比がこの%未満の感情は無視
-DEFAULT_MAIN_EMOTION = "未定義"
+# Emotions with composition ratio below this percentage are ignored
+DEFAULT_MAIN_EMOTION = "未定義" # 未定義 # Undefined
+
+
+
+
+
+
+
+
 
 # データ保存設定
+# Data storage settings
 USE_MONGODB = True
 MONGODB_URI = "your-mongo-uri-here"
 EMOTION_DB_NAME = "emotion_db"
 EMOTION_COLLECTION_NAME = "emotion_index"
 
 # デバッグ・ログ設定
+# Debug/log settings
 DEBUG_MODE = True
 
-#感情辞書
+# 感情辞書
+# Emotion dictionary
 emotion_map = {
     "Joy": "喜び", "Anticipation": "期待", "Anger": "怒り", "Disgust": "嫌悪",
     "Sadness": "悲しみ", "Surprise": "驚き", "Fear": "恐れ", "Trust": "信頼",
@@ -32,4 +46,6 @@ emotion_map = {
 }
 
 # 日本語 → 英語の変換（自動生成）
+# Japanese to English conversion (auto-generated)
 emotion_map_reverse = {v: k for k, v in emotion_map.items()}
+
