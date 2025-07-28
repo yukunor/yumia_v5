@@ -79,7 +79,7 @@ def summarize_feeling(feeling_vector: dict) -> dict:
 
     summary = {k: round((v / 100) * 10) for k, v in summary.items()}
 
-    print("【6感情サマリー】")
+    logger.info("【6感情サマリー】")
     for k, v in summary.items():
         print(f"  {k}: {v}")
 
