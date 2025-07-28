@@ -36,6 +36,6 @@ def get_recent_dialogue_history(n: int = 3) -> list[dict]:
         return result
 
     except Exception as e:
-        print(f"[ERROR] MongoDBからの履歴取得に失敗: {e}")
+        logger.warning(f"[ERROR] MongoDBからの履歴取得に失敗: {e}")
         return []
 
