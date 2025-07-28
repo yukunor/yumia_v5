@@ -1,5 +1,12 @@
-# module/response/response_index.py
+#module/response/response_index.py
+import json
+import os
+import re
+from bson import ObjectId
+
 from module.utils.utils import logger
+from module.mongo.mongo_client import get_mongo_client
+from module.llm.llm_client import generate_gpt_response_from_history
 
 # 構成比とキーワードを受け取る検索インターフェース
 # Search interface that receives composition and keywords
