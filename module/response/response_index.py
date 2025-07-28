@@ -7,19 +7,8 @@ from bson import ObjectId
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
 from module.llm.llm_client import generate_gpt_response_from_history
+from module.params import emotion_map
 
-
-# 英語→日本語変換辞書
-emotion_map = {
-    "Joy": "喜び", "Anticipation": "期待", "Anger": "怒り", "Disgust": "嫌悪",
-    "Sadness": "悲しみ", "Surprise": "驚き", "Fear": "恐れ", "Trust": "信頼",
-    "Optimism": "楽観", "Pride": "誇り", "病的状態": "病的状態", "Aggressiveness": "積極性",
-    "Cynicism": "冷笑", "Pessimism": "悲観", "Contempt": "軽蔑", "Envy": "羨望",
-    "Outrage": "憤慨", "Guilt": "自責", "Unbelief": "不信", "Shame": "恥",
-    "Disappointment": "失望", "Despair": "絶望", "Sentimentality": "感傷", "Awe": "畏敬",
-    "Curiosity": "好奇心", "Delight": "歓喜", "服従": "服従", "Remorse": "罪悪感",
-    "Anxiety": "不安", "Love": "愛", "Hope": "希望", "Dominance": "優位"
-}
 
 def search_index_response(composition: dict, keywords: list[str]) -> dict: #検索用の構成比とキーワードの受取
     composition = emotion_structure.get("構成比", {})
