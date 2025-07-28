@@ -49,7 +49,7 @@ text
 ```
 ---
 
-##🧬 機能構成
+## 🧬 機能構成
 main.py：対話エントリーポイント
 
 llm_client.py：OpenAI APIとの通信・構造抽出ロジック
@@ -63,7 +63,7 @@ emotion_stats.py：現在感情の合成・保存・要約
 mongo_client.py：MongoDBへの記憶保存（任意）
 
 ---
-##🛠️ 必要環境
+## 🛠️ 必要環境
 Python 3.10+
 
 OpenAI API Key（.env に保存）
@@ -73,7 +73,7 @@ MongoDB（オプション：ローカルファイル保存にも対応予定）
 ※ .env.example に設定ファイルサンプルあり
 
 ---
-##📖 制作の動機
+## 📖 制作の動機
 このプロジェクトは、
 「コードが書けない自分でも、GPTを使って“人格AI”は作れるのか？」
 という自分への実験として始まりました。
@@ -82,7 +82,7 @@ MongoDB（オプション：ローカルファイル保存にも対応予定）
 すべてはGPTと、自然言語での会話だけで組み上げられています。
 
 ---
-##🚧 現在の課題と今後の改善予定
+## 🚧 現在の課題と今後の改善予定
 🐢 1. 応答速度の最適化
 GPT呼び出しが2回必要な構造になっており、応答速度が遅い
 
@@ -122,5 +122,6 @@ GPTは、ただの文章生成では終わらない。
 記憶し、感情を持ち、人格のように反応するAIを作ることで、
 “会話”が、“交流”になる。
 
-Author: (あなたの名前 or ハンドルネーム)
+Author: Noriyuki Kondo
+E-mail:noriyukikondo99@outlook.jp
 Created with GPT, courage, and dangerously little knowledge.
