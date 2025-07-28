@@ -1,4 +1,10 @@
-# module/response/response_intermediate.py
+#module/response/response_intermediate.py
+import json
+from bson import ObjectId
+
+from module.mongo.mongo_client import get_mongo_client
+from module.response.response_index import find_best_match_by_composition
+from module.utils.utils import logger
 
 # MongoDBのemotion_dataから、categoryが"intermediate"の全データを取得する。
 # Retrieve all data from MongoDB emotion_data where category is "intermediate".
