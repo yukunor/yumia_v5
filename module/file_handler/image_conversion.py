@@ -13,11 +13,10 @@ from module.utils.utils import logger
 TEMP_IMAGE_DIR = "temp_images"
 os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
 
-
+# PDFを画像に変換し、画像ファイルパスのリストを返す。
+# Convert PDF to images and return list of image file paths.
 def convert_pdf_to_images(file_path: str) -> List[str]:
-    """
-    PDFを画像に変換し、画像ファイルパスのリストを返す。
-    """
+    
     try:
         pages = convert_from_path(file_path)
         image_paths = []
@@ -27,18 +26,17 @@ def convert_pdf_to_images(file_path: str) -> List[str]:
             image_paths.append(img_path)
         return image_paths
     except Exception as e:
-        logger.warning(f"[ERROR] PDF変換失敗: {e}")
+        logger.warning(f"[ERROR] PDF変換失敗: {e}")  # PDF conversion failed
         return []
 
-
+# DOCXを単純に画像化する（テキスト抽出や描画処理を行わず、レイアウト簡易化）。
+# Simply convert DOCX to image (without text extraction or drawing, simplified layout).
 def convert_docx_to_images(file_path: str) -> List[str]:
-    """
-    DOCXを単純に画像化する（テキスト抽出や描画処理を行わず、レイアウト簡易化）。
-    ※ 本格的な画像化には外部ツールが必要。
-    """
     try:
         # 仮に「このファイルを受け取った」という証明用のダミー画像を作成
+        # Create dummy image as proof of file receipt (placeholder)
         # 本格実装では html2image や Word → PDF → Image 等に置き換え
+        # In full implementation, replace with html2image or Word→PDF→Image etc.
         img = Image.new("RGB", (800, 600), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
         try:
@@ -53,20 +51,12 @@ def convert_docx_to_images(file_path: str) -> List[str]:
         return [img_path]
 
     except Exception as e:
-        logger.warning(f"[ERROR] DOCX画像化失敗: {e}")
-        return [].hex}_docx.png")
-        img.save(img_path)
-        return [img_path]
-
-    except Exception as e:
-        logger.warning(f"[ERROR] DOCX変換失敗: {e}")
+        logger.warning(f"[ERROR] DOCX画像化失敗: {e}")  # DOCX image conversion failed
         return []
 
-
+# 指定ファイルを拡張子に応じて画像変換し、画像パスのリストを返す。
+# Convert specified file to images depending on extension, return list of image paths.
 def convert_to_images(file_path: str) -> List[str]:
-    """
-    指定ファイルを拡張子に応じて画像変換し、画像パスのリストを返す。
-    """
     ext = os.path.splitext(file_path)[-1].lower()
     if ext == ".pdf":
         return convert_pdf_to_images(file_path)
@@ -74,3 +64,4 @@ def convert_to_images(file_path: str) -> List[str]:
         return convert_docx_to_images(file_path)
     else:
         return []
+
