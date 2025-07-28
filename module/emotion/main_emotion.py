@@ -8,7 +8,7 @@ from datetime import datetime
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
 from module.emotion.index_emotion import save_index_data
-from module.params import emotion_map  # ✅ 共通辞書を使用
+from module.params import emotion_map
 
 # 応答テキストの中から感情構造JSONを抽出し、辞書形式で返す。
 def save_response_to_memory(response_text: str) -> dict | None:
