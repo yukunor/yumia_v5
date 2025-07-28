@@ -5,20 +5,8 @@ from collections import Counter
 
 from module.mongo.mongo_client import get_mongo_client
 from module.utils.utils import logger
+from module.params import emotion_map
 
-
-
-# 英語→日本語の感情マッピング辞書
-emotion_map = {
-    "Anger": "怒り", "Anticipation": "期待", "Anxiety": "不安", "Awe": "畏敬",
-    "Contempt": "軽蔑", "Curiosity": "好奇心", "Cynicism": "冷笑", "Delight": "歓喜",
-    "Despair": "絶望", "Disappointment": "失望", "Disgust": "嫌悪", "Dominance": "優位",
-    "Envy": "羨望", "Fear": "恐れ", "Guilt": "自責", "Hope": "希望", "Joy": "喜び",
-    "Love": "愛", "Optimism": "楽観", "Outrage": "憤慨", "Pessimism": "悲観",
-    "Pride": "誇り", "Remorse": "後悔", "Sadness": "悲しみ", "Sentimentality": "感傷",
-    "Shame": "恥", "Surprise": "驚き", "Trust": "信頼", "Unbelief": "不信",
-    "Aggressiveness": "積極性"
-}
 
 def get_top_long_emotions():
     
