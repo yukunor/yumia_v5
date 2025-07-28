@@ -11,7 +11,7 @@ def get_mongo_client():
     if _mongo_client is not None:
         try:
             _mongo_client.admin.command("ping")
-            logger.info(("[✅] 既存のMongoClientは正常に接続されています")
+            logger.info("[✅] 既存のMongoClientは正常に接続されています")
             return _mongo_client
         except ConnectionFailure:
             logger.warning("[⚠️] 既存のMongoClientが失敗しました。再接続を試みます")
