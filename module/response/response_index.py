@@ -1,4 +1,5 @@
 # module/response/response_index.py
+from module.utils.utils import logger
 
 # 構成比とキーワードを受け取る検索インターフェース
 # Search interface that receives composition and keywords
