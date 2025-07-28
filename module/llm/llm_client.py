@@ -185,9 +185,9 @@ def generate_emotion_from_prompt_with_context(
                 clean_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
 
                 if "構成比" in emotion_data:
-                    print("🧪 [DEBUG] 構成比デバッグ出力開始")
-                    print("🧪 [DEBUG] 構成比 type:", type(emotion_data["構成比"]))
-                    print("🧪 [DEBUG] 構成比 内容:", emotion_data["構成比"])
+                    logger.debug("🧪 [DEBUG] 構成比デバッグ出力開始")
+                    logger.debug("🧪 [DEBUG] 構成比 type:", type(emotion_data["構成比"]))
+                    logger.debug("🧪 [DEBUG] 構成比 内容:", emotion_data["構成比"])
 
                     threading.Thread(
                         target=run_emotion_update_pipeline,
@@ -217,9 +217,9 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
         )
 
         current = load_current_emotion()
-        print(f"[DEBUG] current type: {type(current)}")  # <class 'dict'>
-        print(f"[DEBUG] new_vector type: {type(new_vector)}")  # ← たぶん <class 'str'>
-        print(f"[DEBUG] new_vector content: {new_vector}")
+        logger.debug(f"[DEBUG] current type: {type(current)}")  # <class 'dict'>
+        logger.debug(f"[DEBUG] new_vector type: {type(new_vector)}")  # ← たぶん <class 'str'>
+        logger.debug(f"[DEBUG] new_vector content: {new_vector}")
         merged = merge_emotion_vectors(current, new_vector)
         save_current_emotion(merged)
         summary = summarize_feeling(merged)
