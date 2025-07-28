@@ -19,7 +19,7 @@ EMOTION_COLLECTION_NAME = "emotion_index"
 # デバッグ・ログ設定
 DEBUG_MODE = True
 
-
+#感情辞書
 emotion_map = {
     "Joy": "喜び", "Anticipation": "期待", "Anger": "怒り", "Disgust": "嫌悪",
     "Sadness": "悲しみ", "Surprise": "驚き", "Fear": "恐れ", "Trust": "信頼",
@@ -30,3 +30,6 @@ emotion_map = {
     "Curiosity": "好奇心", "Delight": "歓喜", "服従": "服従", "Remorse": "罪悪感",
     "Anxiety": "不安", "Love": "愛", "Hope": "希望", "Dominance": "優位"
 }
+
+# 日本語 → 英語の変換（自動生成）
+emotion_map_reverse = {v: k for k, v in emotion_map.items()}
