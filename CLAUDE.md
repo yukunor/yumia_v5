@@ -1,105 +1,125 @@
-# CLAUDE.md
+# 🧠 YUMIA: A Personality-Based Conversational AI with Emotions  
+**Built by a non-coder in 3 months. That should terrify you.**
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**YUMIA** is a personality-based AI chatbot, built entirely through natural language and GPT interactions—  
+designed to **remember, synthesize, and forget emotions** just like a person might.
 
-## Running Commands
+---
 
-### Start the application
+## 💡 Overview
+
+- Records emotional structure (with composition ratios) after each conversation  
+- Classifies memories into **short / intermediate / long-term**, stored in MongoDB (or locally)  
+- Extracts **natural response + emotion JSON** from GPT output  
+- Uses past emotional records and personality tendencies to inform new responses  
+- Automatically “forgets” older memories to **maintain consistency and evolution of personality**
+
+---
+
+## ✨ Key Features
+
+- 🧠 Emotions are remembered, synthesized, and form a persistent personality  
+- 🔁 Generates responses referencing emotional memory (up to 3 levels of depth)  
+- 🗂️ Emotions are layered, stored, updated, and eventually forgotten  
+- 🔎 Extracts structured emotion JSON using regex + markdown-aware patterns  
+- 🧪 Entirely built through interactive prompts—**a no-code development experiment**
+
+---
+
+## 🌐 Usage Example
+
 ```bash
-uvicorn main:app --reload
+> How are you feeling right now?
+I'm feeling a bit more relaxed after talking to you. Thanks.
+{
+  "main_emotion": "relief",
+  "composition": {
+    "relief": 65,
+    "joy": 20,
+    "excitement": 10,
+    "anticipation": 5
+  },
+  "situation": "emotional state after conversation",
+  "reaction": "felt emotionally open",
+  "keywords": ["relief", "empathy"]
+}
 ```
+---
 
-### Deploy to Render
-```bash
-# Build command (as specified in render.yaml)
-pip install -r requirements.txt
+## 🧬 System Modules
+main.py: Entry point for user interaction
 
-# Start command for production
-uvicorn main:app --host 0.0.0.0 --port 10000
-```
+llm_client.py: Manages OpenAI API calls and structured data extraction
 
-### Run tests
-```bash
-pytest tests/
-```
+response_*.py: Handles memory-based emotion references (short / intermediate / long)
 
-### Environment setup
-```bash
-pip install -r requirements.txt
-```
+oblivion_*.py: Manages memory deletion / forgetting (yes, it forgets stuff. On purpose.)
 
-### Load environment variables
-```bash
-# Ensure .env file exists with OPENAI_API_KEY
-# The system uses python-dotenv to load environment variables
-```
+emotion_stats.py: Merges, stores, and summarizes current emotions
 
-## Architecture Overview
+mongo_client.py: Connects to MongoDB for saving memory (optional)
 
-This is a FastAPI-based emotional AI response system (Yumia) that analyzes user input for emotional content and generates contextually appropriate responses. The system is primarily written in Japanese and uses OpenAI's GPT-4o model.
+---
 
-### Core Components
+## 🛠️ Requirements
+Python 3.10+
 
-**FastAPI Server (`main.py`)**
-- Handles `/chat` endpoint for user interactions
-- Processes user input through the emotion pipeline
-- Serves static HTML frontend at root path
-- Manages conversation history via `/history` endpoint
+OpenAI API Key (stored in .env)
 
-**Emotion Processing Pipeline (`module/response/main_response.py`)**
-- Multi-step emotion analysis: estimation → indexing → keyword matching → response generation
-- Categorizes emotions into short/intermediate/long term memory
-- Uses reference emotion data to improve response quality
+MongoDB (optional – local file saving supported)
 
-**Memory System (`module/memory/`)**
-- **main_memory.py**: Central handler for emotion data processing
-- **divide_emotion.py**: Categorizes emotions by intensity/duration (short/intermediate/long)
-- **index_emotion.py**: Maintains searchable emotion indexes
-- **oblivion_emotion.py**: Handles cleanup of old emotion data
+See .env.example for environment config template
 
-**LLM Client (`llm_client.py`)**
-- Manages OpenAI API interactions
-- Handles emotion normalization and validation
-- Processes structured emotion data extraction from responses
-- Maintains allowed emotions list and emotion mapping
-- **Key functions**: `generate_emotion_from_prompt_simple()` for initial emotion estimation, `generate_emotion_from_prompt_with_context()` for context-aware response generation
+---
 
-**Context Selection (`module/context/context_selector.py`)**
-- Selects relevant conversation history for context
-- Manages dialogue continuity
+## 📖 Motivation
+This project began with a simple question:
+"Can I build an emotionally responsive AI—even if I can't code?"
 
-### Data Flow
+Answer: Yes. In three months.
+YUMIA was created entirely through GPT conversations and natural language prompts,
+with no prior coding experience.
 
-1. User input → FastAPI endpoint (`/chat`)
-2. Emotion estimation using GPT-4o (`llm_client.py`)
-3. Index search for similar emotions (`response_index.py`)
-4. Response generation with emotion context (`main_response.py`)
-5. Memory storage and categorization (`memory/` modules)
-6. Response sanitization and history logging
+---
 
-### Key Data Structures
+## 🚧 Current Challenges & Roadmap
+🐢 1. Response Speed Optimization
+Calling the LLM twice per response introduces latency.
 
-- **Emotion Data**: JSON objects with `主感情` (main emotion), `構成比` (composition ratio), keywords, and metadata
-- **Memory Categories**: `short/`, `intermediate/`, `long/` directories storing emotion data by duration
-- **Index Files**: JSONL format emotion indexes for fast retrieval
-- **Conversation History**: JSONL format dialogue records
+✅ Plan to collect response patterns → Apply regression analysis for emotion mixing
+✅ Consider replacing second LLM call with GPT-3.5 to reduce cost and latency
+(emotion reference is locally managed, maintaining response consistency)
 
-### Configuration Files
+🎭 2. Enhancing UI for Emotional Personality Visualization
+✅ Emotion summary will be shown as a dynamic radar chart
+✅ Emotion-linked facial expressions will visually indicate the AI’s mood
+✅ Aim to enhance user experience by “feeling” the AI’s personality
 
-- `system_prompt.txt`: System behavior prompts
-- `emotion_prompt.txt`: Emotion analysis prompts  
-- `dialogue_prompt.txt`: Response generation prompts
-- `emotion_map.json`: Emotion normalization mapping
-- `requirements.txt`: Python dependencies
+🧠 3. Emotion Retention and Reference Strength Tuning
+✅ Tweak balance between short/long memory reference
+✅ Weight memory influence by age, relevance, and emotion intensity
 
-### Testing
+📎 4. Attachment Processing Support
+✅ Plan to support images, PDFs, and text file inputs
+✅ Integrate OCR/text extraction to improve context-rich interactions
 
-Tests are located in `tests/` directory and use pytest framework. Run tests with `pytest tests/`.
+---
 
-## Important Notes
+## 🤝 Usage & License
+This is a personal creative project. Please follow the guidelines below:
 
-- The system requires `OPENAI_API_KEY` environment variable
-- Emotion data is stored in structured JSON format in `memory/` directories
-- The system maintains conversation history in `dialogue_history.jsonl`
-- Logging is configured to write to `app.log`
-- Frontend is served from `static/index.html`
+✅ Forking, personal use, and non-commercial experiments are welcome
+❌ Commercial use, redistribution, or republishing without permission is prohibited
+❗ If you want to use, reference, or extend this project, contact the creator first
+
+---
+
+## 🎯 Final Thought
+GPT isn't just a language generator.
+With memory, emotion, and identity—it becomes something closer to a companion.
+This is not just conversation. This is connection.
+
+Author: Noriyuki Kondo
+📧 E-mail: noriyukikondo99@outlook.jp
+Created with GPT, courage, and dangerously little knowledge.
+
