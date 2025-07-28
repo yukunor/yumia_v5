@@ -6,7 +6,6 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTa
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 from module.llm.llm_client import generate_emotion_from_prompt_with_context, generate_gpt_response_from_history
@@ -26,18 +25,20 @@ class UserMessage(BaseModel):
     message: str
 
 def sanitize_output_for_display(text: str) -> str:
-    # JSONブロックとキーワード構成の削除（整形済み）
-    text = re.sub(r"\n?json\s*\{.*?\}\s*\n?", "", text, flags=re.DOTALL)
-    text = re.sub(r"\{\s*\"date\"\s*:\s*\".*?\".*?\"keywords\"\s*:\s*\[.*?\]\s*\}", "", text, flags=re.DOTALL)
+    """
+    応答テキストから末尾のJSONブロックを除去（UI表示用）。
+    """
+    pattern = r'({.*})'
+    matches = re.findall(pattern, text, re.DOTALL)
+    if matches:
+        return text.replace(matches[-1], '').strip()
     return text.strip()
-
 
 @app.get("/")
 def get_ui():
     return FileResponse("static/index.html")
 
 @app.get("/history")
-#過去履歴をチャット欄に呼び出し
 def get_history():
     try:
         return {"history": load_history()}
@@ -138,15 +139,16 @@ async def chat(
         if background_tasks:
             background_tasks.add_task(process_and_cleanup_emotion_data, final_response)
 
+        visible_response = sanitize_output_for_display(final_response)
+
         return {
-            "response": final_response,
+            "response": visible_response,
             "summary": summary
         }
 
     except Exception as e:
         logger.error(f"❌ エラー発生: {e}")
         return PlainTextResponse("エラーが発生しました。", status_code=500)
-
 
 def store_emotion_structured_data(response_text: str):
     logger.info("🧩 store_emotion_structured_data() が呼び出されました")
@@ -156,10 +158,10 @@ def store_emotion_structured_data(response_text: str):
     else:
         logger.warning("⚠ 背景タスク：構造データの抽出に失敗したため、保存をスキップ")
 
-
 def process_and_cleanup_emotion_data(response_text: str):
     logger.info("🔄 感情データの保存と忘却処理を開始します")
     store_emotion_structured_data(response_text)
     logger.info("🧹 感情データ保存後、忘却処理を実行します")
     run_oblivion_cleanup_all()
     logger.info("✅ 感情データ保存＋忘却処理 完了")
+
