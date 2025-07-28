@@ -85,7 +85,7 @@ def route_file_for_processing(uploaded_file: UploadFile | None) -> str:
             else:
                 return ""
         except Exception as e:
-            print(f"[ERROR] 画像変換失敗: {e}")
+            logger.warning(f"[ERROR] 画像変換失敗: {e}")
             return ""
 
     # その他（png, jpg など画像ファイル） → そのまま返す
