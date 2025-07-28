@@ -57,7 +57,7 @@ def write_structured_emotion_data(data: dict):
         # 主感情を英語に変換
         # Convert main emotion to English
         main_emotion_ja = data.get("主感情", "")
-        main_emotion_en = emotion_map.get(main_emotion_ja)
+        main_emotion_en = emotion_map_reverse.get(main_emotion_ja)
         if not main_emotion_en:
             logger.warning(f"⚠ 主感情が未定義または翻訳不可: {main_emotion_ja}")  # Main emotion undefined or not translatable
             return
