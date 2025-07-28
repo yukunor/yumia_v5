@@ -34,9 +34,19 @@ def get_mongo_collection(category, emotion_label):
 import json
 
 
-    #文字列がJSON形式ならdictに変換。そうでなければそのまま返す。
+def try_parse_json(text: str | tuple) -> dict | str:
+    """
+    🔹 文字列またはタプルからJSONを安全にパース。
+    - 完全なJSONならそのままパース
+    - テキスト中にJSONが埋まっている場合は正規表現で抽出してパース
+    - 失敗時は元の文字列を返す
+    """
+    # 🔰 tupleだった場合は先頭要素を使用
+    if isinstance(text, tuple):
+        text = text[0]
+        logger.warning("[WARN] 入力がtuple形式でした。先頭要素を使用します")
+
     # 🔹 ステップ1: 完全なJSON文字列として処理を試みる
-def try_parse_json(text: str) -> dict | str:
     try:
         parsed = json.loads(text)
         logger.info(f"[INFO] JSONパース成功（直接）: {parsed}")
@@ -59,6 +69,7 @@ def try_parse_json(text: str) -> dict | str:
 
     logger.info("[INFO] JSONとして解釈できませんでした。元のテキストを返します。")
     return text
+
 
     #履歴＋現在感情に基づいて GPT 応答を生成し、整形して返す。
 def get_history_based_response() -> dict:
