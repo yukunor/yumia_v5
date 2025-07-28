@@ -27,7 +27,7 @@ def convert_pdf_to_images(file_path: str) -> List[str]:
             image_paths.append(img_path)
         return image_paths
     except Exception as e:
-        print(f"[ERROR] PDF変換失敗: {e}")
+        logger.warning(f"[ERROR] PDF変換失敗: {e}")
         return []
 
 
@@ -53,13 +53,13 @@ def convert_docx_to_images(file_path: str) -> List[str]:
         return [img_path]
 
     except Exception as e:
-        print(f"[ERROR] DOCX画像化失敗: {e}")
+        logger.warning(f"[ERROR] DOCX画像化失敗: {e}")
         return [].hex}_docx.png")
         img.save(img_path)
         return [img_path]
 
     except Exception as e:
-        print(f"[ERROR] DOCX変換失敗: {e}")
+        logger.warning(f"[ERROR] DOCX変換失敗: {e}")
         return []
 
 
