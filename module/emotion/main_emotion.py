@@ -43,24 +43,27 @@ def save_response_to_memory(response_text: str) -> dict | None:
     return None
 
 # 抽出済みの感情構造データ（JSON）を MongoDB Atlas の emotion_db.emotion_data に保存する。
+# Save the extracted emotion structure data (JSON) to MongoDB Atlas emotion_db.emotion_data.
 def write_structured_emotion_data(data: dict):
     try:
         client = get_mongo_client()
         if client is None:
-            logger.error("❌ MongoDBクライアント取得に失敗")
+            logger.error("❌ MongoDBクライアント取得に失敗")  # Failed to obtain MongoDB client
             return
 
         db = client["emotion_db"]
         collection = db["emotion_data"]
 
         # 主感情を英語に変換
+        # Convert main emotion to English
         main_emotion_ja = data.get("主感情", "")
         main_emotion_en = emotion_map.get(main_emotion_ja)
         if not main_emotion_en:
-            logger.warning(f"⚠ 主感情が未定義または翻訳不可: {main_emotion_ja}")
+            logger.warning(f"⚠ 主感情が未定義または翻訳不可: {main_emotion_ja}")  # Main emotion undefined or not translatable
             return
 
         # 重みに応じてカテゴリを決定
+        # Determine category based on weight
         weight = int(data.get("重み", 0))
         if weight >= 95:
             category = "long"
@@ -70,18 +73,21 @@ def write_structured_emotion_data(data: dict):
             category = "short"
 
         # 保存形式整形
+        # Format for saving
         document = {
             "emotion": main_emotion_en,
             "category": category,
             "data": data.copy(),
-            "履歴": [data.copy()]
+            "履歴": [data.copy()]  # History
         }
 
         # MongoDBへ保存（新規挿入）
+        # Save to MongoDB (insert)
         result = collection.insert_one(document)
-        logger.info(f"✅ MongoDB保存成功: _id={result.inserted_id}, 感情={main_emotion_en}, カテゴリ={category}")
+        logger.info(f"✅ MongoDB保存成功: _id={result.inserted_id}, 感情={main_emotion_en}, カテゴリ={category}")  # MongoDB save successful
         
         # 🔄 インデックスにも同時保存
+        # Also save to index simultaneously
         if "date" in data:
             save_index_data(
                 data=data,
@@ -89,8 +95,7 @@ def write_structured_emotion_data(data: dict):
                 category=category
             )
         else:
-            logger.warning("⚠ dateが存在しないためインデックス保存スキップ")
+            logger.warning("⚠ dateが存在しないためインデックス保存スキップ")  # Skipped index saving because date is missing
 
     except Exception as e:
-        logger.error(f"❌ 感情構造データ保存失敗: {e}")
-
+        logger.error(f"❌ 感情構造データ保存失敗: {e}")  # Failed to save emotion structure data
