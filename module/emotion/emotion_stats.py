@@ -5,13 +5,15 @@ from datetime import datetime
 
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
-from module.params import emotion_map, emotion_map_reverse  # ✅ 差し替えポイント
+from module.params import emotion_map, emotion_map_reverse
 
 # 🔸 構成比を32感情に正規化（日本語キー順）
+# 🔸 Normalize composition ratio into 32 emotions (Japanese key order)
 def normalize_composition_vector(raw_composition: dict) -> dict:
     return {emotion: raw_composition.get(emotion, 0) for emotion in emotion_map_reverse.keys()}
 
 # 現在感情：読み込み
+# Load current emotion
 def load_current_emotion():
     try:
         client = get_mongo_client()
@@ -21,10 +23,11 @@ def load_current_emotion():
             latest = collection.find_one(sort=[("timestamp", -1)])
             return latest["emotion_vector"] if latest else {}
     except Exception as e:
-        logger.error(f"[ERROR] 現在感情の読み込みに失敗: {e}")
+        logger.error(f"[ERROR] 現在感情の読み込みに失敗: {e}")  # Failed to load current emotion
         return {}
 
 # 感情ベクトル合成処理
+# Emotion vector merging process
 def merge_emotion_vectors(
     current: dict,
     new: dict,
@@ -51,6 +54,7 @@ def merge_emotion_vectors(
     return combined
 
 # 現在感情：保存
+# Save current emotion
 def save_current_emotion(emotion_vector):
     try:
         client = get_mongo_client()
@@ -62,11 +66,12 @@ def save_current_emotion(emotion_vector):
                 "emotion_vector": emotion_vector
             }
             collection.insert_one(entry)
-            logger.info("[INFO] 現在感情をMongoDBに保存しました")
+            logger.info("[INFO] 現在感情をMongoDBに保存しました")  # Current emotion saved to MongoDB
     except Exception as e:
-        logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")
+        logger.error(f"[ERROR] 現在感情の保存に失敗: {e}")  # Failed to save current emotion
 
 # 32感情ベクトル → 6感情要約
+# 32-emotion vector → 6-emotion summary
 def summarize_feeling(feeling_vector: dict) -> dict:
     summary = {
         "喜び": sum(feeling_vector.get(e, 0) for e in ["歓喜", "希望", "信頼", "楽観", "愛"]) / 5,
@@ -79,9 +84,8 @@ def summarize_feeling(feeling_vector: dict) -> dict:
 
     summary = {k: round((v / 100) * 10) for k, v in summary.items()}
 
-    logger.info("【6感情サマリー】")
+    logger.info("【6感情サマリー】")  # 6-emotion summary
     for k, v in summary.items():
         print(f"  {k}: {v}")
 
     return summary
-
