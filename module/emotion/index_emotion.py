@@ -7,7 +7,7 @@ from collections import defaultdict, Counter
 
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
-from module.params import emotion_map  # ✅ 共通辞書の読み込み
+from module.params import emotion_map 
 
 # ✅ 正規順の日本語感情リスト（英語順に並べ替え）
 # ✅ Ordered list of Japanese emotions sorted by English order
