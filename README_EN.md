@@ -84,33 +84,24 @@ with no prior coding experience.
 
 ## 🚧 Current Challenges & Roadmap
 🐢 1. Response Speed Optimization
-Calling the LLM twice per response introduces latency.
+- Calling the LLM twice per response introduces latency.
 
-✅ Plan to collect response patterns → Apply regression analysis for emotion mixing
-✅ Consider replacing second LLM call with GPT-3.5 to reduce cost and latency
+- Plan to collect response patterns → Apply regression analysis for emotion mixing
+- Consider replacing second LLM call with GPT-3.5 to reduce cost and latency
 (emotion reference is locally managed, maintaining response consistency)
 
 🎭 2. Enhancing UI for Emotional Personality Visualization
-✅ Emotion summary will be shown as a dynamic radar chart
-✅ Emotion-linked facial expressions will visually indicate the AI’s mood
-✅ Aim to enhance user experience by “feeling” the AI’s personality
+- Emotion summary will be shown as a dynamic radar chart
+- Emotion-linked facial expressions will visually indicate the AI’s mood
+- Aim to enhance user experience by “feeling” the AI’s personality
 
 🧠 3. Emotion Retention and Reference Strength Tuning
-✅ Tweak balance between short/long memory reference
-✅ Weight memory influence by age, relevance, and emotion intensity
+- Tweak balance between short/long memory reference
+- Weight memory influence by age, relevance, and emotion intensity
 
 📎 4. Attachment Processing Support
-✅ Plan to support images, PDFs, and text file inputs
-✅ Integrate OCR/text extraction to improve context-rich interactions
-
----
-
-## 🤝 Usage & License
-This is a personal creative project. Please follow the guidelines below:
-
-✅ Forking, personal use, and non-commercial experiments are welcome
-❌ Commercial use, redistribution, or republishing without permission is prohibited
-❗ If you want to use, reference, or extend this project, contact the creator first
+- Plan to support images, PDFs, and text file inputs
+- Integrate OCR/text extraction to improve context-rich interactions
 
 ---
 
@@ -122,4 +113,14 @@ This is not just conversation. This is connection.
 Author: Noriyuki Kondo
 📧 E-mail: noriyukikondo99@outlook.jp
 Created with GPT, courage, and dangerously little knowledge.
+
+---
+
+© 2025 Noriyuki Kondo. All rights reserved.
+
+This repository and its contents may not be used, copied, modified, or distributed for commercial purposes without explicit written permission from the author.
+
+Personal and educational use is permitted.
+
+Unauthorized redistribution or reuse is prohibited.
 
