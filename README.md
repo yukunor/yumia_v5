@@ -112,7 +112,6 @@ GPTは、ただの文章生成では終わらない。
 
 Author: Noriyuki Kondo
 E-mail:noriyukikondo99@outlook.jp
-Created with GPT, courage, and dangerously little knowledge.
 
 ---
 
