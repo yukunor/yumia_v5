@@ -64,13 +64,11 @@ mongo_client.py: Connects to MongoDB for saving memory (optional)
 ---
 
 ## 🛠️ Requirements
-Python 3.10+
+Python 3.11.9
 
-OpenAI API Key (stored in .env)
+OpenAI API Key
 
 MongoDB (optional – local file saving supported)
-
-See .env.example for environment config template
 
 ---
 
