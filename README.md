@@ -114,8 +114,9 @@ Author: Noriyuki Kondo
 E-mail:noriyukikondo99@outlook.jp
 Created with GPT, courage, and dangerously little knowledge.
 
+---
 
-© 2025 近藤典幸（Noriyuki Kondo）。無断転載・無断使用を禁止します。
+© 2025 近藤憲之（Noriyuki Kondo）。無断転載・無断使用を禁止します。
 
 本リポジトリおよびその内容は、作者の明示的な許可なく商用利用、複製、改変、再配布を禁じます。
 
