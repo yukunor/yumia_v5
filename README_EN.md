@@ -31,6 +31,8 @@ designed to **remember, synthesize, and forget emotions** just like a person mig
 ```bash
 > How are you feeling right now?
 I'm feeling a bit more relaxed after talking to you. Thanks.
+```
+```bash
 {
   "main_emotion": "relief",
   "composition": {
