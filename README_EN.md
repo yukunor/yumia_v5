@@ -114,7 +114,6 @@ This is not just conversation. This is connection.
 
 Author: Noriyuki Kondo
 📧 E-mail: noriyukikondo99@outlook.jp
-Created with GPT, courage, and dangerously little knowledge.
 
 ---
 
