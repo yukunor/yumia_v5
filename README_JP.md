@@ -61,13 +61,12 @@ mongo_client.py：MongoDBへの記憶保存（任意）
 
 ---
 ## 🛠️ 必要環境
-Python 3.10+
+Python 3.11.9
 
-OpenAI API Key（.env に保存）
+OpenAI API Key
 
 MongoDB（オプション：ローカルファイル保存にも対応予定）
 
-※ .env.example に設定ファイルサンプルあり
 
 ---
 ## 📖 制作の動機
