@@ -1,5 +1,5 @@
 # 🧠 YUMIA：人格と感情を持つ対話AI  
-**Built by a non-coder in 3 months. That should terrify you.**
+**Built by a non-coder in 3 months. **
 
 YUMIA（ユミア）は、GPTと自然言語のみで構築された、  
 **感情を記憶・統合・忘却する人格ベース対話AI**です。
