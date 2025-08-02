@@ -214,8 +214,8 @@ def generate_emotion_from_prompt_with_context(
                     except json.JSONDecodeError:
                         break
 
-                logger.debug("🧪 [DEBUG] 構成比 type:", type(emotion_data["構成比"]))
-                logger.debug("🧪 [DEBUG] 構成比 内容:", emotion_data["構成比"])
+                logger.debug(f"🧪 [DEBUG] 構成比 type: {type(emotion_data['構成比'])}")
+                logger.debug(f"🧪 [DEBUG] 構成比 内容: {emotion_data['構成比']}")
 
                 threading.Thread(
                     target=run_emotion_update_pipeline,
@@ -253,5 +253,6 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
         return "感情更新に失敗しました。", {}
+
 
 
