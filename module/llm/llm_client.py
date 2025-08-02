@@ -69,13 +69,25 @@ def generate_gpt_response_from_history() -> tuple[str, dict]:
             "現在の感情はまだ十分に蓄積されていません。通常の口調で応答してください。"
         )
 
+    # 履歴メッセージを整形（tuple形式に備える）
+    formatted_history = []
+    for entry in selected_history:
+        message = entry.get("message")
+        if isinstance(message, tuple):
+            logger.warning("[WARN] 履歴のメッセージがtuple形式です。先頭要素を使用します")
+            message = message[0]
+        formatted_history.append({
+            "role": entry.get("role", "user"),
+            "content": message
+        })
+
     try:
         logger.info("[INFO] OpenAI呼び出し開始")
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
-                *[{"role": entry["role"], "content": entry["message"]} for entry in selected_history],
+                *formatted_history,
                 {"role": "user", "content": f"{emotion_text}\n\n{emotion_prompt}"}
             ],
             max_tokens=OPENAI_MAX_TOKENS,
@@ -230,3 +242,4 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
         return "感情更新に失敗しました。", {}
+
