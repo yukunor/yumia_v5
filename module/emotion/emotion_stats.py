@@ -35,23 +35,50 @@ def merge_emotion_vectors(
     decay_factor: float = 0.9,
     normalize: bool = True
 ) -> dict:
+    """
+    既存の感情ベクトル `current` と、新しい感情ベクトル `new` を重み付きで合成する。
+    数値型以外の値が含まれていた場合は無視される。
+
+    Parameters:
+        current (dict): 現在の感情ベクトル
+        new (dict): 新しい感情ベクトル
+        weight_new (float): 新ベクトルに対する重み（0.0〜1.0）
+        decay_factor (float): 非更新値の減衰率（0.0〜1.0）
+        normalize (bool): 合計100になるよう正規化するか
+
+    Returns:
+        dict: 合成後の感情ベクトル
+    """
     combined = {}
     all_keys = set(current.keys()) | set(new.keys())
+
     for key in all_keys:
         old_val = current.get(key, 0)
         new_val = new.get(key, 0)
+
+        # 型安全：数値以外を除外
+        try:
+            old_val = float(old_val)
+            new_val = float(new_val)
+        except (ValueError, TypeError):
+            logger.warning(f"[WARN] 非数値型の感情値が検出されました: key={key}, old_val={old_val}, new_val={new_val} → スキップ")
+            continue
+
         if key in new:
             merged = (1 - weight_new) * old_val + weight_new * new_val
         else:
             merged = old_val * decay_factor
+
         combined[key] = merged
 
+    # 正規化（合計100に丸める）
     if normalize:
         total = sum(combined.values())
         if total > 0:
             combined = {k: round((v / total) * 100, 2) for k, v in combined.items()}
 
     return combined
+
 
 # 現在感情：保存
 # Save current emotion
