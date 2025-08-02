@@ -1,4 +1,4 @@
-# config/params.py
+# module/params.py
 
 # OpenAI設定
 # OpenAI settings
