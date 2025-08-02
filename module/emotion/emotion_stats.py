@@ -37,7 +37,7 @@ def merge_emotion_vectors(
 ) -> dict:
     """
     既存の感情ベクトル `current` と、新しい感情ベクトル `new` を重み付きで合成する。
-    数値型以外の値が含まれていた場合は無視される。
+    形式崩れ（例: "喜び: 40" など）にも対応。
 
     Parameters:
         current (dict): 現在の感情ベクトル
@@ -50,28 +50,39 @@ def merge_emotion_vectors(
         dict: 合成後の感情ベクトル
     """
     combined = {}
-    all_keys = set(current.keys()) | set(new.keys())
+
+    # 🔧 newのキーが "感情名: 数値" のような形式になっている場合に補正する
+    corrected_new = {}
+    for k, v in new.items():
+        if isinstance(k, str) and ":" in k:
+            try:
+                emotion, _ = k.split(":", 1)
+                corrected_new[emotion.strip()] = float(v)
+            except Exception:
+                logger.warning(f"[WARN] newのキー補正失敗: {k} → 無視")
+        else:
+            corrected_new[k] = v
+
+    all_keys = set(current.keys()) | set(corrected_new.keys())
 
     for key in all_keys:
         old_val = current.get(key, 0)
-        new_val = new.get(key, 0)
+        new_val = corrected_new.get(key, 0)
 
-        # 型安全：数値以外を除外
         try:
             old_val = float(old_val)
             new_val = float(new_val)
         except (ValueError, TypeError):
-            logger.warning(f"[WARN] 非数値型の感情値が検出されました: key={key}, old_val={old_val}, new_val={new_val} → スキップ")
+            logger.warning(f"[WARN] 感情ベクトルに非数値値あり: key={key} → スキップ")
             continue
 
-        if key in new:
+        if key in corrected_new:
             merged = (1 - weight_new) * old_val + weight_new * new_val
         else:
             merged = old_val * decay_factor
 
         combined[key] = merged
 
-    # 正規化（合計100に丸める）
     if normalize:
         total = sum(combined.values())
         if total > 0:
