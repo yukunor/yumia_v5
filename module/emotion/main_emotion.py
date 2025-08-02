@@ -8,7 +8,8 @@ from datetime import datetime
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
 from module.emotion.index_emotion import save_index_data
-from module.params import emotion_map
+from module.params import emotion_map, emotion_map_reverse
+
 
 # 応答テキストの中から感情構造JSONを抽出し、辞書形式で返す。
 # Extract emotion structure JSON from response text and return as a dictionary.
