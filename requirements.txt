@@ -6,3 +6,5 @@ pymongo
 httpx
 jsonlines
 python-multipart
+requests
+
