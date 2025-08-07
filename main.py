@@ -2,12 +2,12 @@ import sys
 import os
 import re
 import traceback
+import requests
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 # モジュールパス追加
-# Add module path
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 from module.llm.llm_client import generate_emotion_from_prompt_with_context, generate_gpt_response_from_history
 from module.utils.utils import load_history, append_history
@@ -19,16 +19,16 @@ from module.response.main_response import find_response_by_emotion, get_best_mat
 from module.response.response_index import load_index
 from module.emotion.emotion_stats import load_current_emotion, merge_emotion_vectors, save_current_emotion, summarize_feeling
 from module.oblivion.oblivion_module import run_oblivion_cleanup_all
+from module.voice.voice_processing import synthesize_voice
+
 
 app = FastAPI()
 
 class UserMessage(BaseModel):
     message: str
 
-#応答テキストから末尾のJSONブロックを除去（UI表示用）
-#Remove the trailing JSON block from the response text (for UI display).
+# 応答テキストから末尾のJSONブロックを除去（UI表示用）
 def sanitize_output_for_display(text: str) -> str:
-
     pattern = r'({.*})'
     matches = re.findall(pattern, text, re.DOTALL)
     if matches:
@@ -44,8 +44,8 @@ def get_history():
     try:
         return {"history": load_history()}
     except Exception as e:
-        logger.exception("履歴取得中に例外が発生しました") #An exception occurred while retrieving the history
-        raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。") #An error occurred while retrieving the history
+        logger.exception("履歴取得中に例外が発生しました")
+        raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
 
 @app.post("/chat")
 async def chat(
@@ -53,12 +53,12 @@ async def chat(
     file: UploadFile = File(None),
     background_tasks: BackgroundTasks = None
 ):
-    logger.debug("✅ /chat エンドポイントに到達") # Reached the /chat endpoint
-    logger.info("✅ debug() 実行済み") # debug() executed
+    logger.debug("✅ /chat エンドポイントに到達")
+    logger.info("✅ debug() 実行済み")
 
     try:
         user_input = message
-        logger.debug(f"📥 ユーザー入力取得完了: {user_input}") # User input successfully retrieved
+        logger.debug(f"📥 ユーザー入力取得完了: {user_input}")
 
         if file:
             logger.debug(f"📎 添付ファイル名: {file.filename}")
@@ -67,12 +67,12 @@ async def chat(
                 user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
 
         append_history("user", user_input)
-        logger.debug("📝 ユーザー履歴追加完了") # User history successfully appended
+        logger.debug("📝 ユーザー履歴追加完了")
 
-        logger.debug(f"②現在感情をロード") # Load current emotion
+        logger.debug(f"②現在感情をロード")
         index_data = load_index()
         current_emotion = load_current_emotion()
-        logger.debug(f"🎯 [INFO] 現在感情ベクトル: {current_emotion}") # Current emotion vector
+        logger.debug(f"🎯 [INFO] 現在感情ベクトル: {current_emotion}")
 
         response_text = generate_gpt_response_from_history()
         logger.info(f"📨 GPT応答:\n{response_text}")
@@ -80,11 +80,11 @@ async def chat(
         emotion_data = find_response_by_emotion()
 
         if emotion_data["type"] == "extracted":
-            logger.info("[STEP] GPT応答から構成比とキーワードを取得済") #Composition and keywords extracted from GPT response
+            logger.info("[STEP] GPT応答から構成比とキーワードを取得済")
             best_match = get_best_match(emotion_data)
 
             if best_match:
-                logger.info("[STEP] インデックスにマッチした応答を取得") # Retrieved response matched to index
+                logger.info("[STEP] インデックスにマッチした応答を取得")
                 response_text = best_match.get("応答", "")
                 append_history("assistant", response_text)
             else:
@@ -99,16 +99,16 @@ async def chat(
                     for cat in ["short", "intermediate", "long"]:
                         if matched.get(cat):
                             response_text = matched[cat].get("応答", "")
-                            logger.info(f"[STEP] 履歴から {cat} カテゴリの応答を返却") # Returned response from {cat} category in history
+                            logger.info(f"[STEP] 履歴から {cat} カテゴリの応答を返却")
                             append_history("assistant", response_text)
                             break
 
                 if not response_text:
-                    logger.warning("[WARN] 履歴にも一致する応答が見つかりませんでした") # No matching response found in history
-                    response_text = "ごめんなさい、うまく思い出せませんでした。" # I'm sorry, I couldn't recall it properly.
+                    logger.warning("[WARN] 履歴にも一致する応答が見つかりませんでした")
+                    response_text = "ごめんなさい、うまく思い出せませんでした。"
                     append_history("assistant", response_text)
         else:
-            logger.info("[STEP] GPT応答が構造化されていないため、生の応答を返却") # Since the GPT response is not structured, the raw response will be returned.
+            logger.info("[STEP] GPT応答が構造化されていないため、生の応答を返却")
             append_history("assistant", response_text)
 
         final_response, final_emotion = generate_emotion_from_prompt_with_context(
@@ -118,12 +118,19 @@ async def chat(
         )
         append_history("assistant", final_response)
 
+        # 音声合成（VoiceVox）
+        voice_settings = final_emotion.get("voicevox_settings")
+        if voice_settings:
+            audio_binary = synthesize_voice(final_response, voice_settings)
+            with open("output.wav", "wb") as f:
+                f.write(audio_binary)
+
         parsed_emotion_data = save_response_to_memory(final_response)
         if parsed_emotion_data:
             write_structured_emotion_data(parsed_emotion_data)
             emotion_to_merge = parsed_emotion_data.get("構成比", final_emotion)
         else:
-            logger.warning("⚠ 構造データ抽出失敗 → 直接生成した感情構成比を使用") # Failed to extract structured data → Using directly generated emotion composition
+            logger.warning("⚠ 構造データ抽出失敗 → 直接生成した感情構成比を使用")
             emotion_to_merge = final_emotion
 
         latest_emotion = load_current_emotion()
@@ -148,8 +155,8 @@ async def chat(
         }
 
     except Exception as e:
-        logger.error(f"❌ エラー発生: {e}") # Error occurred
-        return PlainTextResponse("エラーが発生しました。", status_code=500) # An error has occurred
+        logger.error(f"❌ エラー発生: {e}")
+        return PlainTextResponse("エラーが発生しました。", status_code=500)
 
 def store_emotion_structured_data(response_text: str):
     logger.info("🧩 store_emotion_structured_data() が呼び出されました")
@@ -157,11 +164,23 @@ def store_emotion_structured_data(response_text: str):
     if parsed_emotion_data:
         write_structured_emotion_data(parsed_emotion_data)
     else:
-        logger.warning("⚠ 背景タスク：構造データの抽出に失敗したため、保存をスキップ") # Background task: Skipped saving due to failure in extracting structured data
+        logger.warning("⚠ 背景タスク：構造データの抽出に失敗したため、保存をスキップ")
 
 def process_and_cleanup_emotion_data(response_text: str):
-    logger.info("🔄 感情データの保存と忘却処理を開始します") # Starting emotion data saving and oblivion processing
+    logger.info("🔄 感情データの保存と忘却処理を開始します")
     store_emotion_structured_data(response_text)
-    logger.info("🧹 感情データ保存後、忘却処理を実行します") # After saving emotion data, executing oblivion processing
+    logger.info("🧹 感情データ保存後、忘却処理を実行します")
     run_oblivion_cleanup_all()
-    logger.info("✅ 感情データ保存＋忘却処理 完了") # Emotion data saving and oblivion processing completed
+    logger.info("✅ 感情データ保存＋忘却処理 完了")
+
+# 起動時のチェック処理
+@app.on_event("startup")
+async def on_startup():
+    logger.info("🚀 システム起動チェック開始")
+    try:
+        resp = requests.get("http://localhost:50021/speakers")
+        resp.raise_for_status()
+        logger.info("🔈 VoiceVoxエンジンに接続成功")
+    except Exception as e:
+        logger.warning(f"⚠️ VoiceVoxエンジンに接続できませんでした: {e}")
+    logger.info("✅ 起動前チェック完了")
