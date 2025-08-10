@@ -179,3 +179,4 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
         return "感情更新に失敗しました。", {}
+
