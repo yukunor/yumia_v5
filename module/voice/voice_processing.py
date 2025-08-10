@@ -8,13 +8,8 @@ from module.params import (
     emotion_map_reverse,    # JA → EN
     VOICEVOX_CLIP,          # クリップ範囲 dict
     EMOTION_TOPN_VOICEVOX,  # 合成に使う上位N
+    VOICEVOX_DEFAULT_SPEAKER  # デフォルト話者ID
 )
-
-# 任意：デフォルト話者IDを params に置いておくとさらに楽
-try:
-    from module.params import VOICEVOX_DEFAULT_SPEAKER
-except Exception:
-    VOICEVOX_DEFAULT_SPEAKER = 3  # ずんだもん
 
 # クリップ
 def _clip(v, lo, hi):
@@ -36,7 +31,7 @@ def _to_en_keys(composition: dict[str, float]) -> dict[str, float]:
             logger.debug(f"[VoiceVox] 未定義の感情キーを無視: {k}")
     return out
 
-# 32感情ベクトル → VoiceVox設定（ずんだもん固定）
+# 32感情ベクトル → VoiceVox設定
 def generate_voicevox_settings_from_composition(
     composition: dict[str, float],
     speaker_id: int = VOICEVOX_DEFAULT_SPEAKER,
