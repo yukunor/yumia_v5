@@ -16,6 +16,7 @@ DEFAULT_MAIN_EMOTION = "未定義"  # Undefined main emotion
 # Top-N emotions used for synthesis
 EMOTION_TOPN_VOICEVOX = 5
 EMOTION_TOPN_LIVE2D   = 4
+VOICEVOX_DEFAULT_SPEAKER = 3
 
 # VoiceVoxパラメータの安全レンジ（クリップ）
 # Safe clip ranges for VoiceVox parameters
