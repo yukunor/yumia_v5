@@ -9,10 +9,9 @@ from pydantic import BaseModel
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
 
-from module.llm.llm_client import (
-    generate_emotion_from_prompt_with_context,
-    generate_gpt_response_from_history,
-)
+# LLMは最終出力のときにだけ呼ぶ
+from module.llm.llm_client import generate_emotion_from_prompt_with_context
+
 from module.utils.utils import load_history, append_history, logger
 from module.emotion.main_emotion import save_response_to_memory, write_structured_emotion_data
 from module.emotion.emotion_stats import (
@@ -21,7 +20,12 @@ from module.emotion.emotion_stats import (
     save_current_emotion,
     summarize_feeling,
 )
-from module.response.main_response import find_response_by_emotion, get_best_match, collect_all_category_responses
+# 検索はローカル抽出結果（構成比＋キーワード）をキーにする
+from module.response.response_index import search_index_response, load_and_categorize_index, load_index
+# ローカル抽出（NRCLex＋MeCab）
+from module.emotion.local_emotion import generate_fallback_emotion_data
+
+from module.response.main_response import collect_all_category_responses
 from module.oblivion.oblivion_module import run_oblivion_cleanup_all
 from module.voice.voice_processing import synthesize_voice
 
@@ -66,54 +70,58 @@ async def chat(
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        # 現在感情ロード
+        # 現在感情ロード（ログ用）
         current_emotion = load_current_emotion()
         logger.debug(f"🎯 [INFO] 現在感情ベクトル: {current_emotion}")
 
-        # 直近履歴ベースの仮応答（構造抽出の足がかり）
-        response_text = generate_gpt_response_from_history()
-        logger.info(f"📨 GPT応答:\n{response_text}")
+        # ローカル抽出：構成比＋キーワード
+        status, emotion_data = generate_fallback_emotion_data(user_input)
+        if status != "ok":
+            logger.warning("⚠ ローカル感情抽出に失敗。空の構成比で続行")
+            emotion_data = {"構成比": {}, "keywords": []}
 
-        # 感情インデックス検索（応答の呼び出し最適化）
-        emotion_data = find_response_by_emotion()
+        # 感情インデックス検索（MongoDB Atlas）
+        response_text = ""
+        best_match = search_index_response(
+            emotion_structure={
+                "構成比": emotion_data.get("構成比", {}),
+                "keywords": emotion_data.get("keywords", [])
+            }
+        )
 
-        if emotion_data.get("type") == "extracted":
-            logger.info("[STEP] GPT応答から構成比とキーワードを取得済")
-            best_match = get_best_match(emotion_data)
-
-            if best_match:
-                logger.info("[STEP] インデックスにマッチした応答を取得")
-                response_text = best_match.get("応答", "")
+        if best_match:
+            logger.info("[STEP] インデックスにマッチした応答を取得")
+            response_text = best_match.get("応答", "")
+            if response_text:
                 append_history("assistant", response_text)
-            else:
-                from datetime import datetime
-                dominant_emotion = next(iter(emotion_data["構成比"]), None)
-                if dominant_emotion:
-                    today = datetime.now().strftime("%Y-%m-%d")
-                    matched = collect_all_category_responses(
-                        emotion_name=dominant_emotion,
-                        date_str=today
-                    )
-                    for cat in ["short", "intermediate", "long"]:
-                        if matched.get(cat):
-                            response_text = matched[cat].get("応答", "")
-                            logger.info(f"[STEP] 履歴から {cat} カテゴリの応答を返却")
-                            append_history("assistant", response_text)
-                            break
-
-                if not response_text:
-                    logger.warning("[WARN] 履歴にも一致する応答が見つかりませんでした")
-                    response_text = "ごめんなさい、うまく思い出せませんでした。"
-                    append_history("assistant", response_text)
         else:
-            logger.info("[STEP] 構造化されていないため、生の応答を返却")
-            append_history("assistant", response_text)
+            # フォールバック：主要感情＋当日でカテゴリ別に探す
+            from datetime import datetime as _dt
+            dominant_emotion = next(iter(emotion_data.get("構成比", {})), None)
+            if dominant_emotion:
+                today = _dt.now().strftime("%Y-%m-%d")
+                matched = collect_all_category_responses(
+                    emotion_name=dominant_emotion,
+                    date_str=today
+                )
+                for cat in ["short", "intermediate", "long"]:
+                    if matched.get(cat):
+                        response_text = matched[cat].get("応答", "")
+                        logger.info(f"[STEP] 履歴から {cat} カテゴリの応答を返却")
+                        if response_text:
+                            append_history("assistant", response_text)
+                        break
 
-        # 最終応答：感情構成比と参照を踏まえて生成
+            if not response_text:
+                logger.warning("[WARN] 履歴にも一致する応答が見つかりませんでした")
+                response_text = "ごめんなさい、うまく思い出せませんでした。"
+                append_history("assistant", response_text)
+
+        # 最終応答：感情構成比と参照を踏まえて生成（ここで初めてLLMを呼ぶ）
         final_response, final_emotion = generate_emotion_from_prompt_with_context(
             user_input=user_input,
-            emotion_structure=emotion_data.get("構成比", {}),
-            best_match=get_best_match(emotion_data)
+            emotion_structure=emotion_data.get("構成比", {}),  # ←検索用の軽量構成比をそのまま渡す
+            best_match=best_match
         )
         append_history("assistant", final_response)
 
@@ -124,7 +132,7 @@ async def chat(
             with open("output.wav", "wb") as f:
                 f.write(audio_binary)
 
-        # 構造データ抽出・保存
+        # 構造データ抽出・保存（最終応答に対して）
         parsed_emotion_data = save_response_to_memory(final_response)
         if parsed_emotion_data:
             write_structured_emotion_data(parsed_emotion_data)
