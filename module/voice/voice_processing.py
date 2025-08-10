@@ -3,6 +3,8 @@
 import requests
 from module.utils.utils import logger
 
+# 32感情 → VoiceVox合成パラメータ
+# 32 emotions → VoiceVox parameter presets
 VOICEVOX_EMOTION_MAP = {
     "喜び":     {"pitchScale": 0.20, "speedScale": 0.53, "intonationScale": 0.78, "volumeScale": 0.83},
     "期待":     {"pitchScale": 0.33, "speedScale": 1.18, "intonationScale": 1.39, "volumeScale": 0.75},
@@ -38,10 +40,30 @@ VOICEVOX_EMOTION_MAP = {
     "優位":     {"pitchScale": -0.24, "speedScale": 1.45, "intonationScale": 1.12, "volumeScale": 1.01}
 }
 
-def generate_voicevox_settings_from_composition(composition: dict[str, float], speaker_id: int = 3) -> dict:
-    total = sum(composition.values())
-    if total == 0:
-        return {
+# 🔧 クリップ関数
+# Clamp helper
+def _clip(v, lo, hi):
+    return max(lo, min(hi, v))
+
+# 🎚 スムージング（指数移動平均）
+# Exponential moving average smoothing
+def _ema(prev, cur, alpha=0.7):
+    return alpha * cur + (1 - alpha) * prev
+
+# 32感情ベクトル → VoiceVox設定（ずんだもん固定）
+# 32-emotion composition → VoiceVox settings (Zundamon fixed)
+def generate_voicevox_settings_from_composition(
+    composition: dict[str, float],
+    speaker_id: int = 3,
+    topn: int = 5,
+    prev_settings: dict | None = None,
+    smooth_alpha: float = 0.7
+) -> dict:
+    # 🔸 空/ゼロ対策
+    # Guard for empty/zero vector
+    total = sum(composition.values()) if composition else 0.0
+    if total <= 0:
+        base = {
             "speaker": speaker_id,
             "pitchScale": 0.0,
             "speedScale": 1.0,
@@ -50,33 +72,67 @@ def generate_voicevox_settings_from_composition(composition: dict[str, float], s
             "prePhonemeLength": 0.1,
             "postPhonemeLength": 0.1
         }
+        if prev_settings:
+            for k in ["pitchScale", "speedScale", "intonationScale", "volumeScale"]:
+                base[k] = round(_ema(prev_settings.get(k, base[k]), base[k], smooth_alpha), 3)
+        return base
 
-    pitch, speed, intonation, volume = 0.0, 0.0, 0.0, 0.0
-    for emotion, weight in composition.items():
-        if emotion not in VOICEVOX_EMOTION_MAP:
+    # 🔸 未定義キーの無視（ログのみ）
+    # Ignore unknown emotion keys
+    unknown = [k for k in composition.keys() if k not in VOICEVOX_EMOTION_MAP]
+    if unknown:
+        logger.debug(f"[VoiceVox] 未定義の感情キーを無視: {unknown}")
+
+    # 🔸 上位N感情のみで合成（ノイズ低減）
+    # Use top-N emotions only to reduce noise
+    items = sorted(composition.items(), key=lambda kv: kv[1], reverse=True)[:max(1, topn)]
+    subtotal = sum(w for _, w in items) or 1.0
+
+    pitch = speed = intonation = volume = 0.0
+    for emotion, weight in items:
+        preset = VOICEVOX_EMOTION_MAP.get(emotion)
+        if not preset:
             continue
-        ratio = weight / total
-        preset = VOICEVOX_EMOTION_MAP[emotion]
-        pitch += preset["pitchScale"] * ratio
-        speed += preset["speedScale"] * ratio
-        intonation += preset["intonationScale"] * ratio
-        volume += preset["volumeScale"] * ratio
+        ratio = weight / subtotal
+        pitch       += preset["pitchScale"]      * ratio
+        speed       += preset["speedScale"]      * ratio
+        intonation  += preset["intonationScale"] * ratio
+        volume      += preset["volumeScale"]     * ratio
 
-    return {
+    # 🔸 安全レンジにクリップ
+    # Clip to safe ranges
+    pitch      = _clip(round(pitch, 3),      -0.6, 0.6)
+    speed      = _clip(round(speed, 3),       0.5, 1.5)
+    intonation = _clip(round(intonation, 3),  0.5, 1.6)
+    volume     = _clip(round(volume, 3),      0.7, 1.3)
+
+    settings = {
         "speaker": speaker_id,
-        "pitchScale": round(pitch, 3),
-        "speedScale": round(speed, 3),
-        "intonationScale": round(intonation, 3),
-        "volumeScale": round(volume, 3),
+        "pitchScale": pitch,
+        "speedScale": speed,
+        "intonationScale": intonation,
+        "volumeScale": volume,
         "prePhonemeLength": 0.1,
         "postPhonemeLength": 0.1
     }
 
+    # 🔸 前回値があればスムージング
+    # Smooth with previous settings if available
+    if prev_settings:
+        for k in ["pitchScale", "speedScale", "intonationScale", "volumeScale"]:
+            settings[k] = round(_ema(prev_settings.get(k, settings[k]), settings[k], smooth_alpha), 3)
+
+    return settings
+
+
+# VoiceVoxで音声合成
+# Synthesize with VoiceVox
 def synthesize_voice(text: str, settings: dict, base_url: str = "http://localhost:50021") -> bytes:
     try:
         query_resp = requests.post(
             f"{base_url}/audio_query",
             params={"text": text, "speaker": settings["speaker"]},
+            timeout=10
         )
         query_resp.raise_for_status()
         audio_query = query_resp.json()
@@ -88,6 +144,7 @@ def synthesize_voice(text: str, settings: dict, base_url: str = "http://localhos
             f"{base_url}/synthesis",
             params={"speaker": settings["speaker"]},
             json=audio_query,
+            timeout=20
         )
         synth_resp.raise_for_status()
 
