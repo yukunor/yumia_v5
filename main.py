@@ -1,26 +1,29 @@
 import sys
 import os
 import re
-import traceback
 import requests
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi import FastAPI, HTTPException, Form, BackgroundTasks
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
 # モジュールパス追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "module"))
-from module.llm.llm_client import generate_emotion_from_prompt_with_context, generate_gpt_response_from_history
-from module.utils.utils import load_history, append_history
-from module.utils.utils import logger
+
+from module.llm.llm_client import (
+    generate_emotion_from_prompt_with_context,
+    generate_gpt_response_from_history,
+)
+from module.utils.utils import load_history, append_history, logger
 from module.emotion.main_emotion import save_response_to_memory, write_structured_emotion_data
-from module.emotion.emotion_stats import summarize_feeling
-from module.emotion.emotion_stats import load_current_emotion
+from module.emotion.emotion_stats import (
+    load_current_emotion,
+    merge_emotion_vectors,
+    save_current_emotion,
+    summarize_feeling,
+)
 from module.response.main_response import find_response_by_emotion, get_best_match, collect_all_category_responses
-from module.response.response_index import load_index
-from module.emotion.emotion_stats import load_current_emotion, merge_emotion_vectors, save_current_emotion, summarize_feeling
 from module.oblivion.oblivion_module import run_oblivion_cleanup_all
 from module.voice.voice_processing import synthesize_voice
-
 
 app = FastAPI()
 
@@ -43,15 +46,14 @@ def get_ui():
 def get_history():
     try:
         return {"history": load_history()}
-    except Exception as e:
+    except Exception:
         logger.exception("履歴取得中に例外が発生しました")
         raise HTTPException(status_code=500, detail="履歴の取得中にエラーが発生しました。")
 
 @app.post("/chat")
 async def chat(
     message: str = Form(...),
-    file: UploadFile = File(None),
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks | None = None
 ):
     logger.debug("✅ /chat エンドポイントに到達")
     logger.info("✅ debug() 実行済み")
@@ -60,26 +62,22 @@ async def chat(
         user_input = message
         logger.debug(f"📥 ユーザー入力取得完了: {user_input}")
 
-        if file:
-            logger.debug(f"📎 添付ファイル名: {file.filename}")
-            extracted_text = await handle_uploaded_file(file)
-            if extracted_text:
-                user_input += f"\n\n[添付ファイルの内容]:\n{extracted_text}"
-
+        # 履歴追加（user）
         append_history("user", user_input)
         logger.debug("📝 ユーザー履歴追加完了")
 
-        logger.debug(f"②現在感情をロード")
-        index_data = load_index()
+        # 現在感情ロード
         current_emotion = load_current_emotion()
         logger.debug(f"🎯 [INFO] 現在感情ベクトル: {current_emotion}")
 
+        # 直近履歴ベースの仮応答（構造抽出の足がかり）
         response_text = generate_gpt_response_from_history()
         logger.info(f"📨 GPT応答:\n{response_text}")
 
+        # 感情インデックス検索（応答の呼び出し最適化）
         emotion_data = find_response_by_emotion()
 
-        if emotion_data["type"] == "extracted":
+        if emotion_data.get("type") == "extracted":
             logger.info("[STEP] GPT応答から構成比とキーワードを取得済")
             best_match = get_best_match(emotion_data)
 
@@ -108,9 +106,10 @@ async def chat(
                     response_text = "ごめんなさい、うまく思い出せませんでした。"
                     append_history("assistant", response_text)
         else:
-            logger.info("[STEP] GPT応答が構造化されていないため、生の応答を返却")
+            logger.info("[STEP] 構造化されていないため、生の応答を返却")
             append_history("assistant", response_text)
 
+        # 最終応答：感情構成比と参照を踏まえて生成
         final_response, final_emotion = generate_emotion_from_prompt_with_context(
             user_input=user_input,
             emotion_structure=emotion_data.get("構成比", {}),
@@ -125,6 +124,7 @@ async def chat(
             with open("output.wav", "wb") as f:
                 f.write(audio_binary)
 
+        # 構造データ抽出・保存
         parsed_emotion_data = save_response_to_memory(final_response)
         if parsed_emotion_data:
             write_structured_emotion_data(parsed_emotion_data)
@@ -133,6 +133,7 @@ async def chat(
             logger.warning("⚠ 構造データ抽出失敗 → 直接生成した感情構成比を使用")
             emotion_to_merge = final_emotion
 
+        # 現在感情の更新
         latest_emotion = load_current_emotion()
         merged_emotion = merge_emotion_vectors(
             current=latest_emotion,
@@ -144,6 +145,7 @@ async def chat(
         save_current_emotion(merged_emotion)
         summary = summarize_feeling(merged_emotion)
 
+        # 背景で忘却処理
         if background_tasks:
             background_tasks.add_task(process_and_cleanup_emotion_data, final_response)
 
