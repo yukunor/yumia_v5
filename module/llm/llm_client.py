@@ -5,16 +5,14 @@ import os
 import threading
 from datetime import datetime
 
-from module.utils.utils import load_history, load_system_prompt_cached, load_emotion_prompt, load_dialogue_prompt, logger
+from module.utils.utils import load_system_prompt_cached, load_dialogue_prompt, logger
 from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI_MAX_TOKENS
-from module.mongo.emotion_dataset import get_recent_dialogue_history
 from module.emotion.basic_personality import get_top_long_emotions
-from module.emotion.emotion_stats import load_current_emotion
-
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
+# 応答テキスト末尾からJSONブロックを抽出
+# Extract trailing JSON block from response
 def extract_emotion_json_block(response_text: str) -> dict | None:
     logger.info("🧪 JSON抽出プロセス開始")
 
@@ -42,92 +40,8 @@ def extract_emotion_json_block(response_text: str) -> dict | None:
     return None
 
 
-def generate_gpt_response_from_history() -> tuple[str, dict]:
-    logger.info("[START] generate_gpt_response_from_history")
-    generation_time = datetime.now().strftime("%Y%m%d%H%M%S")
-
-    system_prompt = load_system_prompt_cached()
-    emotion_prompt = load_emotion_prompt()
-
-    logger.info("[INFO] 履歴取得中...")
-    selected_history = load_history(3)
-    logger.info(f"[INFO] 履歴件数: {len(selected_history)} 件")
-
-    current_emotion = load_current_emotion()
-    logger.info(f"[INFO] 現在感情ベクトル: {current_emotion}")
-
-    if current_emotion:
-        emotion_text = (
-            "\n【現在の感情状態（AI自身の内的状態）】\n"
-            "あなた（AI）は以下の感情を現在抱いています。\n"
-            "この感情に従って、言葉遣いや態度、語尾などを自然に調整してください。\n"
-            + ", ".join([f"{k}: {v}%" for k, v in current_emotion.items()])
-        )
-    else:
-        emotion_text = (
-            "\n【現在の感情状態（AI自身の内的状態）】\n"
-            "現在の感情はまだ十分に蓄積されていません。通常の口調で応答してください。"
-        )
-
-    # 履歴メッセージを整形（型の安全性を確保）
-    formatted_history = []
-    for entry in selected_history:
-        message = entry.get("message")
-
-        if isinstance(message, tuple):
-            logger.warning("[WARN] 履歴のメッセージがtuple形式です。先頭要素を使用します")
-            message = message[0]
-
-        if isinstance(message, list):
-            logger.warning("[WARN] 履歴のメッセージがlist形式です。結合して使用します")
-            message = " ".join(str(m) for m in message)
-
-        if not isinstance(message, str):
-            logger.warning(f"[WARN] 履歴のメッセージがstr型ではありません: type={type(message)} → str()変換")
-            message = str(message)
-
-        formatted_history.append({
-            "role": entry.get("role", "user"),
-            "content": message
-        })
-
-    try:
-        logger.info("[INFO] OpenAI呼び出し開始")
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                *formatted_history,
-                {"role": "user", "content": f"{emotion_text}\n\n{emotion_prompt}"}
-            ],
-            max_tokens=OPENAI_MAX_TOKENS,
-            temperature=OPENAI_TEMPERATURE,
-            top_p=OPENAI_TOP_P
-        )
-        logger.info("[INFO] OpenAI応答取得完了")
-        content = response.choices[0].message.content.strip()
-
-        fallback_emotion_data = {
-            "date": generation_time,
-            "データ種別": "emotion",
-            "重み": 10,
-            "主感情": "未定",
-            "構成比": {},
-            "状況": "履歴から感情未参照で応答生成",
-            "心理反応": "履歴のみで判断",
-            "関係性変化": "初期段階",
-            "関連": [],
-            "keywords": []
-        }
-
-        return content, fallback_emotion_data
-
-    except Exception as e:
-        logger.error(f"[ERROR] OpenAI呼び出し失敗: {e}")
-        return "応答生成中にエラーが発生しました。", {}
-
-
-
+# 参照データ（best_match）を加味して最終応答を生成（LLMはここでのみ呼ぶ）
+# Generate final response using best_match reference (single LLM call)
 def generate_emotion_from_prompt_with_context(
     user_input: str,
     emotion_structure: dict,
@@ -141,6 +55,7 @@ def generate_emotion_from_prompt_with_context(
         + load_dialogue_prompt()
     )
 
+    # 人格傾向
     top4_personality = get_top_long_emotions()
     personality_text = "\n【人格傾向】\nこのAIは以下の感情を持つ傾向があります：\n"
     if top4_personality:
@@ -149,47 +64,47 @@ def generate_emotion_from_prompt_with_context(
     else:
         personality_text += "傾向情報がまだ十分にありません。\n"
 
-    if best_match is None:
-        fallback_response, fallback_emotion_data = generate_gpt_response_from_history()
-        fallback_emotion_data["date"] = generation_time
-        return fallback_response, fallback_emotion_data
-
-    from module.response.main_response import collect_all_category_responses
-
-    emotion_name = best_match.get("emotion")
-    date_str = best_match.get("date")
-    history_data = collect_all_category_responses(emotion_name, date_str)
-
-    reference_emotions = []
-    for category in ["short", "intermediate", "long"]:
-        data = history_data.get(category)
-        if data:
-            reference_emotions.append(data)
-
+    # 参照データの整形（best_matchが無い場合でも追加のLLM呼び出しはしない）
     reference_text = "\n\n【AI自身の記憶（参考感情データ）】\n"
-    reference_text += (
-        "以下は、あなた自身（AI）がこれまでに経験・記録した感情の記憶です。\n"
-        "各ケースは実際のユーザーとの対話に基づいて記録されたものであり、あなたの内的な記憶として保存されています。\n"
-        "これらの記憶を参照しながら、自然で一貫性のある応答を構成してください。\n"
-    )
+    if best_match is None:
+        reference_text += "参照可能な記憶は見つかりませんでした。通常の方針で応答してください。\n"
+    else:
+        from module.response.main_response import collect_all_category_responses
 
-    for i, item in enumerate(reference_emotions, 1):
-        reference_text += f"\n● 記憶ケース{i}\n"
-        reference_text += f"主感情: {item.get('主感情')}\n"
-        reference_text += f"構成比: {item.get('構成比')}\n"
-        reference_text += f"状況: {item.get('状況')}\n"
-        reference_text += f"心理反応: {item.get('心理反応')}\n"
-        reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
+        emotion_name = best_match.get("emotion")
+        date_str = best_match.get("date")
+        history_data = collect_all_category_responses(emotion_name, date_str)
 
+        reference_emotions = []
+        for category in ["short", "intermediate", "long"]:
+            data = history_data.get(category)
+            if data:
+                reference_emotions.append(data)
+
+        reference_text += (
+            "以下は、あなた自身（AI）がこれまでに経験・記録した感情の記憶です。\n"
+            "各ケースは実際のユーザーとの対話に基づいて記録されたものであり、あなたの内的な記憶として保存されています。\n"
+            "これらの記憶を参照しながら、自然で一貫性のある応答を構成してください。\n"
+        )
+        for i, item in enumerate(reference_emotions, 1):
+            reference_text += f"\n● 記憶ケース{i}\n"
+            reference_text += f"主感情: {item.get('主感情')}\n"
+            reference_text += f"構成比: {item.get('構成比')}\n"
+            reference_text += f"状況: {item.get('状況')}\n"
+            reference_text += f"心理反応: {item.get('心理反応')}\n"
+            reference_text += f"キーワード: {', '.join(item.get('keywords', []))}\n"
+
+    # プロンプト
     prompt = (
         f"{personality_text}\n"
         f"ユーザー発言: {user_input}\n"
         f"{reference_text}\n\n"
-        f"【指示】上記の感情参照データと人格傾向を参考に、emotion_promptのルールに従って応答を生成してください。\n"
+        f"【指示】上記の（あれば）感情参照データと人格傾向を参考に、emotion_promptのルールに従って応答を生成してください。\n"
         f"自然な応答 + 構成比 + JSON形式の感情構造の順で出力してください。"
     )
 
     try:
+        # LLM呼び出しはここだけ
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
@@ -200,13 +115,17 @@ def generate_emotion_from_prompt_with_context(
             temperature=OPENAI_TEMPERATURE,
             top_p=OPENAI_TOP_P
         )
+
+        # LLMからの生テキスト応答
         full_response = response.choices[0].message.content.strip()
 
+        # 🎯 JSON抽出（LLM出力後に実行）
         emotion_data = extract_emotion_json_block(full_response)
 
         if emotion_data:
             emotion_data["date"] = generation_time
 
+            # 構成比が文字列で来る場合のデシリアライズ
             if "構成比" in emotion_data:
                 while isinstance(emotion_data["構成比"], str):
                     try:
@@ -214,17 +133,21 @@ def generate_emotion_from_prompt_with_context(
                     except json.JSONDecodeError:
                         break
 
-                logger.debug(f"🧪 [DEBUG] 構成比 type: {type(emotion_data['構成比'])}")
-                logger.debug(f"🧪 [DEBUG] 構成比 内容: {emotion_data['構成比']}")
+            logger.debug(f"🧪 [DEBUG] 構成比 type: {type(emotion_data.get('構成比'))}")
+            logger.debug(f"🧪 [DEBUG] 構成比 内容: {emotion_data.get('構成比')}")
 
+            # 感情ベクトルの保存・減衰更新は別スレッドで
+            if "構成比" in emotion_data and isinstance(emotion_data["構成比"], dict):
                 threading.Thread(
                     target=run_emotion_update_pipeline,
                     args=(emotion_data["構成比"],)
                 ).start()
 
+            # 表示用：JSONブロックを除去して自然文のみ返す
             clean_response = re.sub(r"```json\s*\{.*?\}\s*```", "", full_response, flags=re.DOTALL).strip()
             return clean_response, emotion_data
 
+        # JSONブロックが見つからない場合はそのまま返す
         return full_response, {}
 
     except Exception as e:
@@ -232,6 +155,8 @@ def generate_emotion_from_prompt_with_context(
         return "応答生成でエラーが発生しました。", {}
 
 
+# 感情ベクトルのマージ＆保存＆要約（バックグラウンド）
+# Merge and persist emotion vector (background)
 def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
     try:
         from module.emotion.emotion_stats import (
@@ -245,6 +170,7 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
         logger.debug(f"[DEBUG] current type: {type(current)}")
         logger.debug(f"[DEBUG] new_vector type: {type(new_vector)}")
         logger.debug(f"[DEBUG] new_vector content: {new_vector}")
+
         merged = merge_emotion_vectors(current, new_vector)
         save_current_emotion(merged)
         summary = summarize_feeling(merged)
@@ -253,6 +179,3 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
         return "感情更新に失敗しました。", {}
-
-
-
