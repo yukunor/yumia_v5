@@ -6,26 +6,43 @@ from bson import ObjectId
 
 from module.utils.utils import logger
 from module.mongo.mongo_client import get_mongo_client
-from module.llm.llm_client import generate_gpt_response_from_history
-from module.params import emotion_map
+from module.params import emotion_map  # 英語→日本語変換マップ
 
 # 構成比とキーワードを受け取る検索インターフェース
 # Search interface that receives composition and keywords
-def search_index_response(composition: dict, keywords: list[str]) -> dict:
-    composition = emotion_structure.get("構成比", {})
+def search_index_response(emotion_structure: dict) -> dict:
     # Extract composition ratio
-    keywords = emotion_structure.get("keywords", [])
+    composition = emotion_structure.get("構成比", {})
     # Extract keywords
+    keywords = emotion_structure.get("keywords", [])
+
+    # インデックスデータの読み込み
+    categorized_index = load_and_categorize_index()
+
+    # カテゴリごとに検索
+    best_matches = {}
+    for category, data in categorized_index.items():
+        # キーワードでフィルタリング
+        keyword_filtered = filter_by_keywords(data, keywords)
+        # 構成比で最良候補を選択
+        best_match = find_best_match_by_composition(composition, keyword_filtered)
+        if best_match:
+            best_matches[category] = best_match
+
+    return best_matches
+
 
 # 英語の感情名を日本語に変換
 # Convert emotion name from English to Japanese
 def translate_emotion(emotion): 
     return emotion_map.get(emotion, emotion)
 
+
 # 受け取った構成比（部分的）を emotion_map 順に整形（不足は0で埋める）
 # Normalize partial composition vector in the order of emotion_map (fill missing with 0)
 def normalize_composition_vector(partial_composition: dict) -> dict: 
     return {jp_emotion: partial_composition.get(jp_emotion, 0) for jp_emotion in emotion_map.values()}
+
 
 # MongoDBからemotion_indexを取得
 # Load emotion_index from MongoDB
@@ -47,6 +64,7 @@ def load_index():
         # Failed to retrieve from MongoDB
         return []
 
+
 # 取得したemotion_indexをカテゴリごとに分類
 # Categorize loaded emotion_index data by category
 def load_and_categorize_index():
@@ -65,6 +83,7 @@ def load_and_categorize_index():
 
     return categorized
 
+
 # キーワードフィルタリング処理
 # Perform keyword filtering on categorized emotion_index
 def filter_by_keywords(index_data, input_keywords):
@@ -73,10 +92,6 @@ def filter_by_keywords(index_data, input_keywords):
     logger.info(f"🎯 一致件数: {len(filtered)}")
     return filtered
 
-# 英語の感情名を日本語に変換（重複あり）
-# Convert English emotion name to Japanese (duplicate)
-def translate_emotion(emotion: str) -> str:
-    return emotion_map.get(emotion, emotion)
 
 # 構成比の一致スコアに基づき最も近い候補を選出
 # Find best match based on similarity of emotion composition
@@ -140,4 +155,3 @@ def find_best_match_by_composition(current_composition, candidates):
     logger.info(f"🏅 最も構成比が近い候補を選出: {jp_emotion}")
 
     return best
-
