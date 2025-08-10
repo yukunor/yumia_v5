@@ -8,6 +8,7 @@ from datetime import datetime
 from module.utils.utils import load_system_prompt_cached, load_dialogue_prompt, logger
 from module.params import OPENAI_MODEL, OPENAI_TEMPERATURE, OPENAI_TOP_P, OPENAI_MAX_TOKENS
 from module.emotion.basic_personality import get_top_long_emotions
+from module.voice.voice_processing import generate_voicevox_settings_from_composition
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -123,6 +124,7 @@ def generate_emotion_from_prompt_with_context(
         emotion_data = extract_emotion_json_block(full_response)
 
         if emotion_data:
+            # 付帯メタ
             emotion_data["date"] = generation_time
 
             # 構成比が文字列で来る場合のデシリアライズ
@@ -136,8 +138,19 @@ def generate_emotion_from_prompt_with_context(
             logger.debug(f"🧪 [DEBUG] 構成比 type: {type(emotion_data.get('構成比'))}")
             logger.debug(f"🧪 [DEBUG] 構成比 内容: {emotion_data.get('構成比')}")
 
-            # 感情ベクトルの保存・減衰更新は別スレッドで
-            if "構成比" in emotion_data and isinstance(emotion_data["構成比"], dict):
+            # 🔊 VoiceVox設定の自動生成・埋め込み（ずんだもん固定）
+            # Auto-generate VoiceVox settings from 32-emotion vector (Zundamon fixed)
+            if isinstance(emotion_data.get("構成比"), dict):
+                vv_settings = generate_voicevox_settings_from_composition(
+                    composition=emotion_data["構成比"],
+                    speaker_id=3,     # ずんだもん固定
+                    topn=5,           # 最大4感情運用でも冗長に5へ
+                    prev_settings=None,  # 履歴を使うなら差し替え
+                    smooth_alpha=0.7
+                )
+                emotion_data["voicevox_settings"] = vv_settings
+
+                # 感情ベクトルの保存・減衰更新は別スレッドで
                 threading.Thread(
                     target=run_emotion_update_pipeline,
                     args=(emotion_data["構成比"],)
@@ -179,4 +192,3 @@ def run_emotion_update_pipeline(new_vector: dict) -> tuple[str, dict]:
     except Exception as e:
         logger.error(f"[ERROR] 感情更新処理に失敗: {e}")
         return "感情更新に失敗しました。", {}
-
